@@ -14,7 +14,17 @@
       "Bash(rm:*)",
       "Bash(git clean:*)",
       "Bash(npx pnpm install:*)",
+<<<<<<< HEAD
       "Bash(test:*)"
+=======
+      "Bash(test:*)",
+      "Read(//c/lt3.0/**)",
+      "Bash(npx pnpm:*)",
+      "Bash(npx eslint:*)",
+      "Bash(cat:*)",
+      "Bash(npx next:*)",
+      "Read(//c//**)"
+>>>>>>> f1c25d87f7d85ca2c87a3c958514794ebb3485b1
     ],
     "deny": [],
     "ask": []
