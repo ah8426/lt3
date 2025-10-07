@@ -1,4 +1,9 @@
 import type { NextConfig } from 'next'
+import bundleAnalyzer from '@next/bundle-analyzer'
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+})
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -9,9 +14,43 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    // Optimize package imports to reduce bundle size
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-label',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-progress',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-scroll-area',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slider',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-toast',
+      '@radix-ui/react-tooltip',
+      'date-fns',
+    ],
   },
 
-  // Image domains for external images
+  // Server external packages (moved from experimental)
+  serverExternalPackages: [
+    '@prisma/client',
+    'bcrypt',
+    'pdf-lib',
+    'mammoth',
+    'docxtemplater',
+    'html-pdf-node',
+  ],
+
+  // Image optimization for Core Web Vitals (LCP)
   images: {
     remotePatterns: [
       {
@@ -19,16 +58,125 @@ const nextConfig: NextConfig = {
         hostname: '**.supabase.co',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    minimumCacheTTL: 60,
   },
 
+  // Compress output
+  compress: true,
+  // Production source maps for debugging
+  productionBrowserSourceMaps: false,
+
   // Webpack configuration
-  webpack: (config) => {
+  webpack: (config, { dev, isServer }) => {
+    // Externalize heavy server-only packages
     config.externals.push({
       'utf-8-validate': 'commonjs utf-8-validate',
       'bufferutil': 'commonjs bufferutil',
     })
+
+    // Tree shaking for large libraries
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Reduce bundle size by using lighter alternatives where possible
+        '@aws-sdk/client-s3': false,
+      }
+    }
+
+    // Enable module concatenation for better minification
+    config.optimization = {
+      ...config.optimization,
+      moduleIds: 'deterministic',
+      ...(dev
+        ? {}
+        : {
+            splitChunks: {
+              chunks: 'all',
+              cacheGroups: {
+                // Separate vendor chunks for better caching
+                default: false,
+                vendors: false,
+                // Framework chunk (React, Next.js)
+                framework: {
+                  name: 'framework',
+                  test: /[\\/]node_modules[\\/](react|react-dom|scheduler|prop-types|use-sync-external-store)[\\/]/,
+                  priority: 40,
+                  enforce: true,
+                },
+                // Large third-party libraries
+                lib: {
+                  test: /[\\/]node_modules[\\/]/,
+                  name(module: any) {
+                    const packageName = module.context.match(
+                      /[\\/]node_modules[\\/](.*?)([\\/]|$)/
+                    )?.[1]
+                    return `npm.${packageName?.replace('@', '')}`
+                  },
+                  priority: 30,
+                  minChunks: 1,
+                  reuseExistingChunk: true,
+                },
+                // Common chunks used across pages
+                commons: {
+                  name: 'commons',
+                  minChunks: 2,
+                  priority: 20,
+                },
+              },
+            },
+          }),
+    }
+
     return config
+  },
+
+  // Headers for security and caching (improves CLS)
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+        ],
+      },
+      {
+        source: '/fonts/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+    ]
   },
 }
 
-export default nextConfig
+export default withBundleAnalyzer(nextConfig)

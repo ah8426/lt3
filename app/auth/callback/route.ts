@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   const origin = requestUrl.origin
 
   if (code) {
-    const cookieStore = await cookies()
+    await cookies() // Ensures cookies are properly initialized
     const supabase = await createServerClient()
 
     await supabase.auth.exchangeCodeForSession(code)

@@ -34,7 +34,7 @@ export const CardSkeleton = () => (
 /**
  * Dynamic import with optimized loading states
  */
-export function lazyLoad<P extends Record<string, any>>(
+export function lazyLoad<P extends Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<P> }>,
   options?: {
     loading?: ComponentType
@@ -107,7 +107,7 @@ export function preloadComponent(
  * Lazy load with intersection observer
  * Only loads component when it enters viewport
  */
-export function lazyLoadOnView<P extends Record<string, any>>(
+export function lazyLoadOnView<P extends Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<P> }>,
   options?: {
     rootMargin?: string
