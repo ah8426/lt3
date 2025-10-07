@@ -66,8 +66,24 @@ export function ApiKeysSettings() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      // TODO: Save to API with encryption
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Save each API key that has been entered
+      const keysToSave = apiKeys.filter((key) => key.key && key.key.trim())
+
+      for (const apiKey of keysToSave) {
+        const response = await fetch('/api/api-keys', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: apiKey.provider,
+            apiKey: apiKey.key,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed to save ${apiKey.label}`)
+        }
+      }
+
       toast({
         title: 'API keys saved',
         description: 'Your API keys have been securely encrypted and saved.',
@@ -75,7 +91,7 @@ export function ApiKeysSettings() {
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'Failed to save API keys. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to save API keys.',
         variant: 'destructive',
       })
     } finally {
@@ -86,8 +102,25 @@ export function ApiKeysSettings() {
   const handleTest = async (provider: string) => {
     setIsTesting(provider)
     try {
-      // TODO: Test API key
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const apiKey = apiKeys.find((k) => k.provider === provider)
+      if (!apiKey || !apiKey.key) {
+        throw new Error('No API key entered')
+      }
+
+      const response = await fetch(`/api/api-keys/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider,
+          apiKey: apiKey.key,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Verification failed')
+      }
 
       setApiKeys(
         apiKeys.map((key) =>
@@ -99,7 +132,7 @@ export function ApiKeysSettings() {
 
       toast({
         title: 'API key verified',
-        description: `Successfully connected to ${apiKeys.find((k) => k.provider === provider)?.label}`,
+        description: `Successfully connected to ${apiKey.label}`,
       })
     } catch (error) {
       setApiKeys(
@@ -112,7 +145,7 @@ export function ApiKeysSettings() {
 
       toast({
         title: 'Verification failed',
-        description: 'Failed to connect with this API key. Please check and try again.',
+        description: error instanceof Error ? error.message : 'Failed to connect with this API key.',
         variant: 'destructive',
       })
     } finally {

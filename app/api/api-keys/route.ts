@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
-import { prisma } from '@/lib/server/db';
-import { encryptAPIKey, maskAPIKey, validateAPIKeyFormat } from '@/lib/server/encryption/key-manager';
+import { prisma } from '@/lib/prisma';
+import { encryptAPIKey, maskAPIKey, validateAPIKeyFormat } from '@/lib/encryption/key-manager';
 import { z } from 'zod';
 
 // ============================================================================
