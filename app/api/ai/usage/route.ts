@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
-import prisma from '@/lib/prisma'
+import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 
@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
  * Get AI usage statistics for the current user
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
 
   const {
     data: { user },

@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { AIProviderManager } from '@/lib/ai/provider-manager'
 import type { AIProvider, AIMessage, AIStreamChunk } from '@/types/ai'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -12,7 +12,7 @@ export const maxDuration = 60
  * Stream a chat completion with optional transcript context
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
 
   const {
     data: { user },

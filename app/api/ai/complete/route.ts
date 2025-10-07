@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { AIProviderManager } from '@/lib/ai/provider-manager'
 import type { AIProvider, AICompletionOptions } from '@/types/ai'
-import prisma from '@/lib/prisma'
+import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -12,7 +12,7 @@ export const maxDuration = 60
  * Complete a chat completion request through server-side proxy
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
 
   const {
     data: { user },
