@@ -1,0 +1,91 @@
+{
+    "project": {
+        "name": "Next.js Performance Optimization Project",
+        "version": {
+            "nextjs": "15.5.4",
+            "react": "19",
+            "typescript": "latest"
+        },
+        "focus": "Performance Optimization with Multi-Agent Coordination"
+    },
+    "current_state": {
+        "optimization_status": {
+            "bundle_size_reduction_target": "60%",
+            "lcp_improvement_target": "40%",
+            "frontend_optimization_completed": true,
+            "blockers": [
+                "Tailwind CSS v4 beta PostCSS compatibility issue"
+            ]
+        },
+        "key_technologies": [
+            "Next.js 15",
+            "React 19",
+            "Redis",
+            "Radix UI",
+            "Tailwind CSS v4 beta"
+        ]
+    },
+    "design_decisions": {
+        "performance_architecture": {
+            "base_directory": "/lib/performance/",
+            "strategies": [
+                "Lazy loading with dynamic imports",
+                "Intersection observer integration",
+                "Web Vitals monitoring",
+                "LRU caching",
+                "Request optimization"
+            ]
+        },
+        "code_patterns": [
+            "Custom React performance hooks",
+            "Utility-first optimization approach",
+            "Type-safe metrics collection",
+            "Bundle analysis configuration",
+            "Production-ready error handling"
+        ]
+    },
+    "agent_coordination": {
+        "history": {
+            "agents_involved": [
+                "database-optimizer",
+                "performance-engineer",
+                "frontend-developer",
+                "context-manager"
+            ],
+            "status": {
+                "frontend_optimization": "Completed",
+                "database_optimization": "Pending",
+                "application_performance": "Pending"
+            },
+            "usage_limits_reached": [
+                "database_agent",
+                "application_performance_agent"
+            ]
+        }
+    },
+    "future_roadmap": [
+        "Fix Tailwind CSS v4 build configuration",
+        "Complete database optimization analysis",
+        "Implement application performance optimizations",
+        "Create Web Vitals analytics API route",
+        "Run comprehensive bundle analysis",
+        "Implement production monitoring and alerting"
+    ],
+    "key_files": [
+        "/lib/performance/",
+        "/lib/lazy-load.ts",
+        "/components/web-vitals.tsx",
+        "next.config.ts",
+        "PERFORMANCE_OPTIMIZATIONS.md"
+    ],
+    "recent_commits": [
+        "Add Radix UI components",
+        "Update Redis client methods",
+        "Performance optimization implementation",
+        "UI components enhancement"
+    ],
+    "metadata": {
+        "last_updated": "2025-10-07",
+        "saved_by": "Claude Performance Context Manager"
+    }
+}
