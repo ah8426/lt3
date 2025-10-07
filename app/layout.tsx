@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { WebVitals } from '@/components/web-vitals'
+import { Providers } from '@/components/providers'
 import './globals.css'
 
 // Optimized font loading with display swap and subset
@@ -70,8 +71,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <WebVitals />
-        {children}
+        <Providers>
+          <WebVitals />
+          {children}
+        </Providers>
       </body>
     </html>
   )
