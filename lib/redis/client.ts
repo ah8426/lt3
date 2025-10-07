@@ -79,7 +79,8 @@ export const redisClient = {
    * Get multiple values at once
    */
   async mget<T = string>(...keys: string[]): Promise<(T | null)[]> {
-    return await redis.mget<T>(...keys)
+    const result = await redis.mget(...keys)
+    return result as (T | null)[]
   },
 
   /**
@@ -93,7 +94,8 @@ export const redisClient = {
    * Add to a sorted set with score
    */
   async zadd(key: string, score: number, member: string): Promise<number> {
-    return await redis.zadd(key, { score, member })
+    const result = await redis.zadd(key, { score, member })
+    return result ?? 0
   },
 
   /**
@@ -104,7 +106,9 @@ export const redisClient = {
     min: number | string,
     max: number | string
   ): Promise<string[]> {
-    return await redis.zrangebyscore(key, min, max)
+    const minScore = typeof min === 'number' ? min : parseFloat(min)
+    const maxScore = typeof max === 'number' ? max : parseFloat(max)
+    return await redis.zrange(key, minScore, maxScore, { byScore: true })
   },
 
   /**
@@ -115,7 +119,9 @@ export const redisClient = {
     min: number | string,
     max: number | string
   ): Promise<number> {
-    return await redis.zremrangebyscore(key, min, max)
+    const minScore = typeof min === 'number' ? min : parseFloat(min)
+    const maxScore = typeof max === 'number' ? max : parseFloat(max)
+    return await redis.zremrangebyscore(key, minScore, maxScore)
   },
 
   /**
@@ -136,7 +142,8 @@ export const redisClient = {
    * Get all fields from a hash
    */
   async hgetall<T = Record<string, string>>(key: string): Promise<T> {
-    return await redis.hgetall<T>(key)
+    const result = await redis.hgetall(key)
+    return (result ?? {}) as T
   },
 
   /**
