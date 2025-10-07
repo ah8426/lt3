@@ -20,6 +20,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { WaveformVisualizer } from '@/components/dictation/WaveformVisualizer';
+import { TranscriptSegmentEditor } from '@/components/sessions/TranscriptSegmentEditor';
 import {
   ArrowLeft,
   Edit2,
@@ -64,8 +65,6 @@ export default function SessionDetailPage() {
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
-  const [editedText, setEditedText] = useState('');
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [shareLink, setShareLink] = useState('');
   const [copied, setCopied] = useState(false);
@@ -95,31 +94,6 @@ export default function SessionDetailPage() {
     } catch (error) {
       console.error('Failed to update title:', error);
     }
-  };
-
-  /**
-   * Handle segment edit
-   */
-  const handleStartEditSegment = (segmentId: string, text: string) => {
-    setEditingSegmentId(segmentId);
-    setEditedText(text);
-  };
-
-  const handleSaveSegment = async () => {
-    if (!editingSegmentId || !editedText.trim()) return;
-
-    try {
-      await updateSegment(editingSegmentId, { text: editedText });
-      setEditingSegmentId(null);
-      setEditedText('');
-    } catch (error) {
-      console.error('Failed to update segment:', error);
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingSegmentId(null);
-    setEditedText('');
   };
 
   /**
@@ -216,23 +190,6 @@ export default function SessionDetailPage() {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  /**
-   * Get speaker color
-   */
-  const getSpeakerColor = (speaker?: number): string => {
-    if (speaker === undefined) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
-
-    const colors = [
-      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
-    ];
-
-    return colors[speaker % colors.length];
   };
 
   // Loading state
@@ -360,88 +317,16 @@ export default function SessionDetailPage() {
             <CardContent>
               <ScrollArea className="h-[600px] pr-4">
                 <div className="space-y-4">
-                  {segments?.map((segment: any) => {
-                    const isEditing = editingSegmentId === segment.id;
-
-                    return (
-                      <div
-                        key={segment.id}
-                        className="group p-4 rounded-lg border dark:border-gray-700 hover:border-[#00BFA5] transition-colors"
-                      >
-                        {/* Segment Header */}
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {segment.speaker !== undefined && segment.speaker !== null && (
-                              <Badge
-                                variant="outline"
-                                className={`${getSpeakerColor(segment.speaker)} border-0`}
-                              >
-                                <User className="h-3 w-3 mr-1" />
-                                Speaker {segment.speaker}
-                              </Badge>
-                            )}
-
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Clock className="h-3 w-3" />
-                              <span>{formatDuration(segment.start_time)}</span>
-                            </div>
-
-                            {segment.confidence && (
-                              <Badge
-                                variant="outline"
-                                className={
-                                  segment.confidence >= 0.9
-                                    ? 'border-green-300 text-green-700'
-                                    : segment.confidence >= 0.7
-                                    ? 'border-yellow-300 text-yellow-700'
-                                    : 'border-red-300 text-red-700'
-                                }
-                              >
-                                {Math.round(segment.confidence * 100)}%
-                              </Badge>
-                            )}
-                          </div>
-
-                          {!isEditing && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => handleStartEditSegment(segment.id, segment.text)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Segment Text */}
-                        {isEditing ? (
-                          <div className="space-y-2">
-                            <Textarea
-                              value={editedText}
-                              onChange={(e) => setEditedText(e.target.value)}
-                              className="w-full min-h-[100px]"
-                              autoFocus
-                            />
-                            <div className="flex gap-2">
-                              <Button size="sm" onClick={handleSaveSegment}>
-                                <Save className="h-4 w-4 mr-1" />
-                                Save
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                                <X className="h-4 w-4 mr-1" />
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-base text-gray-900 dark:text-white leading-relaxed">
-                            {segment.text}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {segments?.map((segment: any) => (
+                    <TranscriptSegmentEditor
+                      key={segment.id}
+                      segment={segment}
+                      onUpdate={async (segmentId, text, originalText) => {
+                        await updateSegment(segmentId, { text }, originalText)
+                      }}
+                      isUpdating={false}
+                    />
+                  ))}
                 </div>
               </ScrollArea>
             </CardContent>
