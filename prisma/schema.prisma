@@ -60,12 +60,15 @@ model EncryptedApiKey {
   id              String   @id @default(cuid())
   userId          String
   provider        String   // 'deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'
-  encryptedKey    String   @db.Text
-  iv              String
-  authTag         String?
+  encryptedKey    String   @db.Text // Format: version:nonce:ciphertext
+  maskedKey       String?  // For display: "sk-12••••••3456"
   isActive        Boolean  @default(true)
+  lastTestedAt    DateTime?
+  testStatus      String?  // 'success', 'failed', 'pending'
+  testError       String?  @db.Text
   createdAt       DateTime @default(now())
   lastUsedAt      DateTime?
+  updatedAt       DateTime @updatedAt
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
