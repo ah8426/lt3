@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
-import { prisma } from '@/lib/server/db';
-import { decryptAPIKey } from '@/lib/server/encryption/key-manager';
+import { prisma } from '@/lib/prisma';
+import { decryptAPIKey } from '@/lib/encryption/key-manager';
 
 /**
  * Test API key connection
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { provider } = body;
+    const { provider, apiKey } = body;
 
     if (!provider) {
       return NextResponse.json(
@@ -100,39 +100,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch encrypted API key
-    const apiKeyRecord = await prisma.encryptedApiKey.findUnique({
-      where: {
-        userId_provider: {
-          userId: user.id,
-          provider,
-        },
-        isActive: true,
-      },
-    });
+    let keyToTest: string;
+    let apiKeyRecordId: string | null = null;
 
-    if (!apiKeyRecord) {
-      return NextResponse.json(
-        { error: 'API key not found' },
-        { status: 404 }
-      );
+    // If API key is provided directly, test it without database lookup
+    if (apiKey) {
+      keyToTest = apiKey;
+    } else {
+      // Fetch encrypted API key from database
+      const apiKeyRecord = await prisma.encryptedApiKey.findUnique({
+        where: {
+          userId_provider: {
+            userId: user.id,
+            provider,
+          },
+          isActive: true,
+        },
+      });
+
+      if (!apiKeyRecord) {
+        return NextResponse.json(
+          { error: 'API key not found' },
+          { status: 404 }
+        );
+      }
+
+      // Decrypt the API key
+      keyToTest = await decryptAPIKey(apiKeyRecord.encryptedKey, user.id);
+      apiKeyRecordId = apiKeyRecord.id;
     }
 
-    // Decrypt the API key
-    const decryptedKey = await decryptAPIKey(apiKeyRecord.encryptedKey, user.id);
-
     // Test the connection
-    const testResult = await testAPIKey(provider, decryptedKey);
+    const testResult = await testAPIKey(provider, keyToTest);
 
-    // Update test status
-    await prisma.encryptedApiKey.update({
-      where: { id: apiKeyRecord.id },
-      data: {
-        lastTestedAt: new Date(),
-        testStatus: testResult.success ? 'success' : 'failed',
-        testError: testResult.error,
-      },
-    });
+    // Update test status if key exists in database
+    if (apiKeyRecordId) {
+      await prisma.encryptedApiKey.update({
+        where: { id: apiKeyRecordId },
+        data: {
+          lastTestedAt: new Date(),
+          testStatus: testResult.success ? 'success' : 'failed',
+          testError: testResult.error,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: testResult.success,
