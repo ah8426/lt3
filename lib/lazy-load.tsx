@@ -37,58 +37,59 @@ export const CardSkeleton = () => (
 export function lazyLoad<P extends Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<P> }>,
   options?: {
-    loading?: ComponentType
+    loading?: () => JSX.Element
     ssr?: boolean
   }
 ) {
   return dynamic(importFn, {
-    loading: options?.loading || LoadingFallback,
+    loading: options?.loading,
     ssr: options?.ssr ?? true,
   })
 }
 
 /**
  * Heavy component imports - lazy loaded by default
+ * Uncomment as components are created
  */
 
 // Audio/Video components (wavesurfer.js, recordrtc are heavy)
-export const AudioRecorder = lazyLoad(
-  () => import('@/components/audio/audio-recorder'),
-  { ssr: false } // Client-only component
-)
+// export const AudioRecorder = lazyLoad(
+//   () => import('@/components/audio/audio-recorder'),
+//   { ssr: false } // Client-only component
+// )
 
-export const AudioPlayer = lazyLoad(
-  () => import('@/components/audio/audio-player'),
-  { ssr: false }
-)
+// export const AudioPlayer = lazyLoad(
+//   () => import('@/components/audio/audio-player'),
+//   { ssr: false }
+// )
 
 // PDF/Document viewers (pdf-lib, mammoth are heavy)
-export const PDFViewer = lazyLoad(
-  () => import('@/components/documents/pdf-viewer'),
-  { ssr: false }
-)
+// export const PDFViewer = lazyLoad(
+//   () => import('@/components/documents/pdf-viewer'),
+//   { ssr: false }
+// )
 
-export const DocumentEditor = lazyLoad(
-  () => import('@/components/documents/document-editor'),
-  { ssr: false }
-)
+// export const DocumentEditor = lazyLoad(
+//   () => import('@/components/documents/document-editor'),
+//   { ssr: false }
+// )
 
 // Data tables (tanstack table can be heavy)
-export const DataTable = lazyLoad(
-  () => import('@/components/ui/data-table')
-)
+// export const DataTable = lazyLoad(
+//   () => import('@/components/ui/data-table')
+// )
 
 // Charts and visualizations
-export const ChartComponent = lazyLoad(
-  () => import('@/components/charts/chart'),
-  { ssr: false }
-)
+// export const ChartComponent = lazyLoad(
+//   () => import('@/components/charts/chart'),
+//   { ssr: false }
+// )
 
 // Rich text editors
-export const RichTextEditor = lazyLoad(
-  () => import('@/components/editors/rich-text-editor'),
-  { ssr: false }
-)
+// export const RichTextEditor = lazyLoad(
+//   () => import('@/components/editors/rich-text-editor'),
+//   { ssr: false }
+// )
 
 /**
  * Preload a component for improved perceived performance
@@ -121,26 +122,27 @@ export function lazyLoadOnView<P extends Record<string, unknown>>(
 
 /**
  * Route-based code splitting helpers
+ * Uncomment as components are created
  */
-export const routeComponents = {
-  // Dashboard components
-  dashboard: {
-    Overview: lazyLoad(() => import('@/components/dashboard/overview')),
-    Analytics: lazyLoad(() => import('@/components/dashboard/analytics')),
-    RecentActivity: lazyLoad(() => import('@/components/dashboard/recent-activity')),
-  },
+// export const routeComponents = {
+//   // Dashboard components
+//   dashboard: {
+//     Overview: lazyLoad(() => import('@/components/dashboard/overview')),
+//     Analytics: lazyLoad(() => import('@/components/dashboard/analytics')),
+//     RecentActivity: lazyLoad(() => import('@/components/dashboard/recent-activity')),
+//   },
 
-  // Document components
-  documents: {
-    List: lazyLoad(() => import('@/components/documents/document-list')),
-    Upload: lazyLoad(() => import('@/components/documents/document-upload')),
-    Preview: lazyLoad(() => import('@/components/documents/document-preview'), { ssr: false }),
-  },
+//   // Document components
+//   documents: {
+//     List: lazyLoad(() => import('@/components/documents/document-list')),
+//     Upload: lazyLoad(() => import('@/components/documents/document-upload')),
+//     Preview: lazyLoad(() => import('@/components/documents/document-preview'), { ssr: false }),
+//   },
 
-  // Settings components
-  settings: {
-    Profile: lazyLoad(() => import('@/components/settings/profile')),
-    Billing: lazyLoad(() => import('@/components/settings/billing')),
-    Security: lazyLoad(() => import('@/components/settings/security')),
-  },
-}
+//   // Settings components
+//   settings: {
+//     Profile: lazyLoad(() => import('@/components/settings/profile')),
+//     Billing: lazyLoad(() => import('@/components/settings/billing')),
+//     Security: lazyLoad(() => import('@/components/settings/security')),
+//   },
+// }

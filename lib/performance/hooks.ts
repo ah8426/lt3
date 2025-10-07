@@ -106,7 +106,7 @@ export function usePrefetch<T>(
   fetcher: () => Promise<T>,
   enabled: boolean = true
 ): () => void {
-  const cache = useRef<{ data?: T; promise?: Promise<T> }>({})
+  const cache = useRef<{ data?: T; promise?: Promise<void> }>({})
 
   return useCallback(() => {
     if (!enabled || cache.current.promise || cache.current.data) return
