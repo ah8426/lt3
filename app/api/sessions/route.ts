@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -9,7 +8,7 @@ export const runtime = 'nodejs';
  * Create or update a session
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient();
+  const supabase = await createClient();
 
   // Authenticate user
   const {
@@ -204,7 +203,7 @@ export async function POST(request: NextRequest) {
  * List user's sessions
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createServerClient();
+  const supabase = await createClient();
 
   const {
     data: { user },

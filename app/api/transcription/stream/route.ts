@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase/server';
+import { getUser } from '@/lib/supabase/auth';
+import { prisma } from '@/lib/prisma';
 import { decryptAPIKey } from '@/lib/server/encryption/key-manager';
 import { createASRProviderManager } from '@/lib/asr/provider-manager';
 import type { ASRProviderType } from '@/lib/asr/provider-manager';
@@ -37,12 +38,8 @@ interface StreamResponse {
  * WebSocket-like streaming endpoint for real-time transcription
  */
 export async function POST(request: NextRequest) {
-  const supabase = await createServerClient();
-
   // Authenticate user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -52,16 +49,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const message: StreamMessage = body;
 
-    // Get user's API keys from database
-    const { data: apiKeys, error: keysError } = await supabase
-      .from('encrypted_api_keys')
-      .select('provider, encrypted_key')
-      .eq('user_id', user.id)
-      .in('provider', ['deepgram', 'assemblyai', 'google-ai']);
+    // Get user's API keys from database using Prisma
+    const apiKeys = await prisma.encryptedApiKey.findMany({
+      where: {
+        userId: user.id,
+        provider: {
+          in: ['deepgram', 'assemblyai', 'google'],
+        },
+        isActive: true,
+      },
+      select: {
+        provider: true,
+        encryptedKey: true,
+      },
+    });
 
-    if (keysError || !apiKeys || apiKeys.length === 0) {
+    if (!apiKeys || apiKeys.length === 0) {
       return NextResponse.json(
-        { error: 'No ASR API keys configured' },
+        { error: 'No ASR API keys configured. Please add them in Settings.' },
         { status: 400 }
       );
     }
@@ -76,12 +81,12 @@ export async function POST(request: NextRequest) {
     const providerPriority: Record<string, number> = {
       deepgram: 0,
       assemblyai: 1,
-      'google-ai': 2,
+      google: 2,
     };
 
     for (const key of apiKeys) {
       try {
-        const decrypted = await decryptAPIKey(key.encrypted_key, user.id);
+        const decrypted = await decryptAPIKey(key.encryptedKey, user.id);
         decryptedKeys.push({
           provider: key.provider as ASRProviderType,
           apiKey: decrypted,
@@ -279,7 +284,7 @@ export async function POST(request: NextRequest) {
  * Get transcription segments for a session
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createServerClient();
+  const supabase = await createClient();
 
   const {
     data: { user },

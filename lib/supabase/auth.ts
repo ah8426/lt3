@@ -1,5 +1,5 @@
 import { createClient as createBrowserClient } from './client'
-import { createClient as createServerClient } from './server'
+import { createClient } from './server'
 
 /**
  * Sign in with OAuth provider (Google or Microsoft)
@@ -48,7 +48,7 @@ export async function signOut() {
  * Server-side only
  */
 export async function getSession() {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
 
   const {
     data: { session },
@@ -67,7 +67,7 @@ export async function getSession() {
  * Server-side only
  */
 export async function getUser() {
-  const supabase = await createServerClient()
+  const supabase = await createClient()
 
   const {
     data: { user },
