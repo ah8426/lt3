@@ -56,3 +56,6 @@ export async function createServiceClient() {
     }
   )
 }
+
+// Export createServerClient for compatibility
+export { createServerClient }

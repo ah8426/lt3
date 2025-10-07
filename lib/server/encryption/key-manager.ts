@@ -2,7 +2,12 @@ import { gcm } from '@noble/ciphers/aes';
 import { randomBytes } from '@noble/ciphers/webcrypto';
 import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha256';
-import { utf8ToBytes, bytesToUtf8, hexToBytes, bytesToHex } from '@noble/hashes/utils';
+import { utf8ToBytes, hexToBytes, bytesToHex } from '@noble/hashes/utils';
+
+// Helper function for bytes to UTF-8
+function bytesToUtf8Custom(bytes: Uint8Array): string {
+  return new TextDecoder().decode(bytes);
+}
 
 /**
  * Secure API Key Management System
@@ -121,7 +126,7 @@ export async function decryptAPIKey(
     const plaintext = decipher.decrypt(ciphertext);
 
     // Convert bytes to string
-    return bytesToUtf8(plaintext);
+    return bytesToUtf8Custom(plaintext);
   } catch (error) {
     console.error('Decryption error:', error);
     throw new Error('Failed to decrypt API key');
