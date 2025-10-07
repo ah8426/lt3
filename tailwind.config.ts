@@ -10,15 +10,15 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#1e40af',
+          DEFAULT: '#00BFA5', // Teal - Law Transcribed primary
           foreground: '#ffffff',
         },
         secondary: {
-          DEFAULT: '#64748b',
+          DEFAULT: '#1E3A8A', // Navy Blue - Law Transcribed secondary
           foreground: '#ffffff',
         },
         accent: {
-          DEFAULT: '#0891b2',
+          DEFAULT: '#00BFA5',
           foreground: '#ffffff',
         },
         destructive: {
