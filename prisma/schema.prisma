@@ -1,0 +1,749 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  fullName        String?
+  provider        String    // 'google' or 'microsoft'
+  providerId      String
+  firmId          String?
+  roles           String[]  @default(["user"])
+
+  // Subscription
+  subscriptionTier    String   @default("free") // free, starter, professional, enterprise
+  subscriptionStatus  String   @default("active") // active, trialing, past_due, canceled
+  stripeCustomerId    String?  @unique
+  stripeSubscriptionId String? @unique
+  subscriptionEndsAt  DateTime?
+  trialEndsAt         DateTime?
+
+  // User Settings (includes feature toggles)
+  settings        Json      @default("{}")
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+
+  // Relations
+  matters         Matter[]
+  sessions        Session[]
+  apiKeys         EncryptedApiKey[]
+  auditLogs       AuditLog[]
+  exportJobs      ExportJob[]
+  conflictChecks  ConflictCheck[]
+  billableTime    BillableTime[]
+  templates       DocumentTemplate[]
+  generatedDocs   GeneratedDocument[]
+
+  @@index([email])
+  @@index([firmId])
+  @@index([subscriptionTier, subscriptionStatus])
+}
+
+model EncryptedApiKey {
+  id              String   @id @default(cuid())
+  userId          String
+  provider        String   // 'deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'
+  encryptedKey    String   @db.Text
+  iv              String
+  authTag         String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  lastUsedAt      DateTime?
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId, isActive])
+}
+
+// ============================================================================
+// SUBSCRIPTION & BILLING
+// ============================================================================
+
+model SubscriptionPlan {
+  id              String   @id @default(cuid())
+  name            String   @unique // "Free", "Starter", "Professional", "Enterprise"
+  slug            String   @unique // "free", "starter", "professional", "enterprise"
+  description     String?  @db.Text
+
+  // Pricing
+  priceMonthly    Int      // Cents (e.g., 2900 = $29.00)
+  priceYearly     Int      // Cents with discount
+  stripePriceIdMonthly  String?
+  stripePriceIdYearly   String?
+
+  // Limits
+  maxSessions     Int      @default(-1) // -1 = unlimited
+  maxStorageGB    Int      @default(-1) // -1 = unlimited
+  maxAIRequests   Int      @default(-1) // Per month, -1 = unlimited
+  maxMatters      Int      @default(-1)
+  maxUsers        Int      @default(1)  // For firm accounts
+
+  // Features (JSON for flexibility)
+  features        Json     @default("{}")
+
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  userId          String
+  stripeInvoiceId String   @unique
+
+  // Invoice details
+  amountDue       Int      // Cents
+  amountPaid      Int      // Cents
+  currency        String   @default("usd")
+  status          String   // draft, open, paid, void, uncollectible
+
+  // Dates
+  periodStart     DateTime
+  periodEnd       DateTime
+  dueDate         DateTime?
+  paidAt          DateTime?
+
+  // Files
+  invoicePdf      String?
+  hostedUrl       String?
+
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model UsageMetrics {
+  id              String   @id @default(cuid())
+  userId          String
+
+  // Period
+  periodStart     DateTime
+  periodEnd       DateTime
+
+  // Metrics
+  sessionsCount   Int      @default(0)
+  transcriptionMinutes Float @default(0)
+  aiRequestsCount Int      @default(0)
+  storageUsedGB   Float    @default(0)
+
+  // Costs
+  transcriptionCost Float  @default(0)
+  aiCost          Float    @default(0)
+  storageCost     Float    @default(0)
+  totalCost       Float    @default(0)
+
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, periodStart])
+  @@index([userId, periodEnd])
+}
+
+// ============================================================================
+// MATTERS & SESSIONS
+// ============================================================================
+
+model Matter {
+  id              String   @id @default(cuid())
+  name            String
+  clientName      String
+  adverseParty    String?
+  jurisdiction    String?
+  courtType       String?
+  caseNumber      String?
+  status          String   @default("active")
+  userId          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions        Session[]
+  documents       GeneratedDocument[]
+  conflictChecks  ConflictCheck[]
+  billableTime    BillableTime[]
+
+  @@index([userId, status])
+  @@index([clientName])
+}
+
+model Session {
+  id                    String    @id @default(cuid())
+  matterId              String
+  userId                String
+
+  status                String    @default("active")
+  title                 String?
+  description           String?   @db.Text
+
+  startedAt             DateTime  @default(now())
+  endedAt               DateTime?
+  durationMs            Int?
+
+  audioStoragePath      String?
+  transcriptData        Json?
+
+  shareToken            String?   @unique
+  shareExpiresAt        DateTime?
+  shareScope            String?
+
+  totalCost             Float     @default(0)
+  asrProvider           String?
+  asrCost               Float     @default(0)
+  aiProvider            String?
+  aiCost                Float     @default(0)
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  matter                Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segments              TranscriptSegment[]
+  chatMessages          ChatMessage[]
+  versions              TranscriptVersion[]
+  accessLogs            TranscriptAccessLog[]
+  redactions            Redaction[]
+  speakers              Speaker[]
+  exportJobs            ExportJob[]
+  billableTime          BillableTime[]
+  generatedDocs         GeneratedDocument[]
+
+  @@index([userId, status, startedAt])
+  @@index([matterId, startedAt])
+  @@index([shareToken])
+}
+
+// ============================================================================
+// FEATURE 1: AUDIT LOGGING
+// ============================================================================
+
+model AuditLog {
+  id              String    @id @default(cuid())
+  userId          String?
+  sessionId       String?
+  matterId        String?
+
+  action          String
+  resource        String
+  resourceId      String?
+
+  clientName      String?
+
+  oldValue        Json?
+  newValue        Json?
+  changeReason    String?
+
+  ipAddress       String?
+  userAgent       String?
+  location        String?
+
+  retentionUntil  DateTime?
+  isPrivileged    Boolean   @default(true)
+
+  metadata        Json      @default("{}")
+  timestamp       DateTime  @default(now())
+
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, timestamp])
+  @@index([sessionId, timestamp])
+  @@index([matterId, timestamp])
+  @@index([action, resource])
+  @@index([clientName, timestamp])
+}
+
+// ============================================================================
+// FEATURE 2: VERSION CONTROL
+// ============================================================================
+
+model TranscriptVersion {
+  id              String   @id @default(cuid())
+  sessionId       String
+  version         Int
+
+  segments        Json
+
+  changeType      String
+  changedBy       String
+  changeReason    String?
+
+  diffSummary     Json?
+
+  createdAt       DateTime @default(now())
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, version])
+  @@index([sessionId, createdAt])
+  @@index([changedBy, createdAt])
+}
+
+// ============================================================================
+// FEATURE 3: TIMESTAMP VERIFICATION
+// ============================================================================
+
+model TimestampProof {
+  id              String   @id @default(cuid())
+  sessionId       String
+  segmentId       String
+
+  contentHash     String
+  timestamp       DateTime
+  timestampSource String
+
+  rfc3161Token    String?  @db.Text
+
+  isVerified      Boolean  @default(false)
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  verificationMethod String?
+
+  createdAt       DateTime @default(now())
+
+  segment         TranscriptSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId])
+  @@index([sessionId, timestamp])
+  @@index([isVerified, timestamp])
+}
+
+// ============================================================================
+// FEATURE 4: REDACTION & PII PROTECTION
+// ============================================================================
+
+model Redaction {
+  id              String   @id @default(cuid())
+  sessionId       String
+  segmentId       String
+
+  originalText    String   @db.Text
+  redactedText    String
+  redactionType   String
+
+  startOffset     Int
+  endOffset       Int
+
+  redactedBy      String
+  unredactableBy  String[]
+
+  reason          String?
+  legalBasis      String?
+
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime?
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  segment         TranscriptSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([segmentId])
+  @@index([redactionType])
+}
+
+// ============================================================================
+// FEATURE 5: SPEAKER IDENTIFICATION
+// ============================================================================
+
+model Speaker {
+  id              String   @id @default(cuid())
+  sessionId       String
+
+  name            String
+  role            String?
+  organization    String?
+
+  voiceprint      Json?
+
+  firstSpoke      DateTime
+  lastSpoke       DateTime
+  totalDuration   Int
+  segmentCount    Int
+  wordCount       Int      @default(0)
+
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  segments        TranscriptSegment[]
+
+  @@unique([sessionId, name])
+  @@index([sessionId])
+}
+
+// ============================================================================
+// TRANSCRIPTION
+// ============================================================================
+
+model TranscriptSegment {
+  id              String   @id @default(cuid())
+  sessionId       String
+
+  startMs         Int
+  endMs           Int
+
+  text            String   @db.Text
+
+  speakerId       String?
+  speakerName     String?
+
+  confidence      Float?
+  provider        String?
+
+  isFinal         Boolean  @default(false)
+  isEdited        Boolean  @default(false)
+  editedBy        String?
+
+  createdAt       DateTime @default(now())
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  speaker         Speaker? @relation(fields: [speakerId], references: [id], onDelete: SetNull)
+  timestampProofs TimestampProof[]
+  redactions      Redaction[]
+
+  @@index([sessionId, startMs])
+  @@index([speakerId])
+}
+
+model TranscriptAccessLog {
+  id              String   @id @default(cuid())
+  sessionId       String
+  userId          String?
+  accessType      String
+  accessMethod    String
+  timestamp       DateTime @default(now())
+  ipAddress       String?
+  userAgent       String?
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, timestamp])
+  @@index([userId, timestamp])
+}
+
+// ============================================================================
+// AI CHAT
+// ============================================================================
+
+model ChatMessage {
+  id              String   @id @default(cuid())
+  sessionId       String
+
+  role            String
+  content         String   @db.Text
+
+  provider        String?
+  model           String?
+  tokens          Int?
+  cost            Float?
+
+  contextUsed     Json?
+
+  createdAt       DateTime @default(now())
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  citations       Citation[]
+
+  @@index([sessionId, createdAt])
+}
+
+// ============================================================================
+// CITATION CHECKING (AI-Powered)
+// ============================================================================
+
+model Citation {
+  id              String   @id @default(cuid())
+  chatMessageId   String?
+  sessionId       String?
+  documentId      String?
+
+  citationType    String
+  fullCitation    String   @db.Text
+  shortCitation   String?
+
+  jurisdiction    String?
+  statuteCode     String?
+  section         String?
+
+  caseName        String?
+  reporter        String?
+  volume          Int?
+  page            Int?
+  year            Int?
+  court           String?
+
+  isVerified      Boolean  @default(false)
+  verificationStatus String?
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  verificationNotes String? @db.Text
+
+  treatmentStatus String?
+  treatmentNotes  String?  @db.Text
+
+  westlawUrl      String?
+  lexisUrl        String?
+  publicUrl       String?
+
+  createdAt       DateTime @default(now())
+
+  chatMessage     ChatMessage? @relation(fields: [chatMessageId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, citationType])
+  @@index([jurisdiction, statuteCode, section])
+  @@index([isVerified, verificationStatus])
+}
+
+// ============================================================================
+// DOCUMENT GENERATION & EXPORT
+// ============================================================================
+
+model ExportJob {
+  id                      String   @id @default(cuid())
+  sessionId               String
+  userId                  String
+
+  format                  String
+  template                String?
+
+  includeLineNumbers      Boolean  @default(false)
+  includeTimestamps       Boolean  @default(true)
+  includePageNumbers      Boolean  @default(true)
+  includeCertification    Boolean  @default(false)
+  includeIndexPage        Boolean  @default(false)
+  includeTableOfContents  Boolean  @default(false)
+
+  certifiedBy             String?
+  certificationDate       DateTime?
+  certificationText       String?  @db.Text
+  barNumber               String?
+
+  status                  String   @default("pending")
+  fileUrl                 String?
+  fileSize                Int?
+
+  error                   String?  @db.Text
+  createdAt               DateTime @default(now())
+  completedAt             DateTime?
+
+  session                 Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user                    User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([sessionId])
+  @@index([status])
+}
+
+model DocumentTemplate {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  description     String?  @db.Text
+
+  fileUrl         String
+  fields          Json
+
+  courtType       String?
+  documentType    String?
+  jurisdiction    String?
+
+  useCount        Int      @default(0)
+  lastUsed        DateTime?
+
+  isPublic        Boolean  @default(false)
+  sharedWith      String[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedDocs   GeneratedDocument[]
+
+  @@index([userId, documentType])
+  @@index([isPublic, jurisdiction])
+}
+
+model GeneratedDocument {
+  id              String   @id @default(cuid())
+  templateId      String
+  sessionId       String?
+  matterId        String
+  userId          String
+
+  fileName        String
+  fileUrl         String
+  format          String
+
+  fieldValues     Json
+
+  version         Int      @default(1)
+  parentId        String?
+
+  status          String   @default("draft")
+
+  createdAt       DateTime @default(now())
+
+  template        DocumentTemplate @relation(fields: [templateId], references: [id])
+  session         Session?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  matter          Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@index([matterId, createdAt])
+  @@index([templateId])
+  @@index([userId, status])
+}
+
+// ============================================================================
+// FEATURE 9: CONFLICT CHECKING
+// ============================================================================
+
+model ConflictCheck {
+  id              String   @id @default(cuid())
+  userId          String
+
+  partyNames      String[]
+  companyNames    String[]
+  matterId        String?
+
+  conflicts       Json
+  status          String
+  riskLevel       String?
+
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  resolution      String?
+  resolutionNotes String?  @db.Text
+
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matter          Matter?  @relation(fields: [matterId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([status, riskLevel])
+}
+
+// ============================================================================
+// FEATURE 10: BACKUP & DISASTER RECOVERY
+// ============================================================================
+
+model Backup {
+  id              String   @id @default(cuid())
+  userId          String?
+
+  type            String
+  scope           String
+  scopeId         String?
+
+  resources       Json
+
+  storageProvider String
+  backupUrl       String
+  encryptionKey   String
+
+  size            BigInt
+  checksum        String
+  compressionType String?
+
+  retentionUntil  DateTime
+  isEncrypted     Boolean  @default(true)
+
+  status          String   @default("pending")
+  progress        Int      @default(0)
+  error           String?  @db.Text
+
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([retentionUntil])
+}
+
+// ============================================================================
+// BILLING & TIME TRACKING
+// ============================================================================
+
+model BillableTime {
+  id              String   @id @default(cuid())
+  sessionId       String
+  matterId        String
+  userId          String
+
+  startTime       DateTime
+  endTime         DateTime
+  durationSeconds Int
+  billableSeconds Int
+
+  hourlyRate      Float
+  amount          Float
+
+  activityType    String
+  description     String?  @db.Text
+
+  status          String   @default("draft")
+  invoiceId       String?
+  invoiceDate     DateTime?
+
+  createdAt       DateTime @default(now())
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  matter          Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([matterId, createdAt])
+  @@index([userId, status])
+  @@index([invoiceId])
+}
+
+// ============================================================================
+// SYSTEM TABLES
+// ============================================================================
+
+model FeatureFlag {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  description     String?  @db.Text
+  isEnabled       Boolean  @default(false)
+  rolloutPercent  Int      @default(0)
+  enabledForUsers String[]
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isEnabled])
+}
+
+model SystemLog {
+  id              String   @id @default(cuid())
+  level           String
+  service         String
+  message         String   @db.Text
+  error           String?  @db.Text
+  stack           String?  @db.Text
+  metadata        Json     @default("{}")
+  timestamp       DateTime @default(now())
+
+  @@index([level, timestamp])
+  @@index([service, timestamp])
+}
