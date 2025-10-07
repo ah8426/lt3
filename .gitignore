@@ -61,3 +61,4 @@ Thumbs.db
 # Sentry
 .sentryclirc
 sentry.properties
+nul
