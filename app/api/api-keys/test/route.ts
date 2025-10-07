@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
 import { prisma } from '@/lib/prisma';
-import { decryptAPIKey } from '@/lib/encryption/key-manager';
+import { decryptAPIKey } from '@/lib/server/encryption/key-manager';
 
 /**
  * Test API key connection
