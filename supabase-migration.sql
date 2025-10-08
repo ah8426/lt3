@@ -3,9 +3,12 @@
 -- Run this in Supabase SQL Editor: https://supabase.com/dashboard/project/_/sql
 -- ============================================================================
 
+-- Enable required extensions
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- Create sessions table
-CREATE TABLE IF NOT EXISTS sessions (
-  id TEXT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS public.sessions (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   user_id TEXT NOT NULL,
   matter_id TEXT,
   status TEXT DEFAULT 'recording',
@@ -20,24 +23,25 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 -- Create transcription_segments table
-CREATE TABLE IF NOT EXISTS transcription_segments (
+CREATE TABLE IF NOT EXISTS public.transcription_segments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  session_id TEXT NOT NULL REFERENCES public.sessions(id) ON DELETE CASCADE,
   text TEXT NOT NULL,
   speaker TEXT,
   confidence FLOAT,
   start_time INTEGER,
   end_time INTEGER,
   is_final BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_matter_id ON sessions(matter_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
-CREATE INDEX IF NOT EXISTS idx_segments_session_id ON transcription_segments(session_id);
-CREATE INDEX IF NOT EXISTS idx_segments_created_at ON transcription_segments(created_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON public.sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_matter_id ON public.sessions(matter_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON public.sessions(status);
+CREATE INDEX IF NOT EXISTS idx_segments_session_id ON public.transcription_segments(session_id);
+CREATE INDEX IF NOT EXISTS idx_segments_created_at ON public.transcription_segments(created_at);
 
 -- Create storage bucket for audio recordings (if not exists)
 INSERT INTO storage.buckets (id, name, public)
@@ -45,66 +49,84 @@ VALUES ('audio-recordings', 'audio-recordings', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Set up RLS (Row Level Security) policies
-ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transcription_segments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transcription_segments ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Users can view their own sessions" ON public.sessions;
+DROP POLICY IF EXISTS "Users can insert their own sessions" ON public.sessions;
+DROP POLICY IF EXISTS "Users can update their own sessions" ON public.sessions;
+DROP POLICY IF EXISTS "Users can delete their own sessions" ON public.sessions;
 
 -- Sessions: Users can only access their own sessions
 CREATE POLICY "Users can view their own sessions"
-  ON sessions FOR SELECT
+  ON public.sessions FOR SELECT
   USING (auth.uid()::text = user_id);
 
 CREATE POLICY "Users can insert their own sessions"
-  ON sessions FOR INSERT
+  ON public.sessions FOR INSERT
   WITH CHECK (auth.uid()::text = user_id);
 
 CREATE POLICY "Users can update their own sessions"
-  ON sessions FOR UPDATE
+  ON public.sessions FOR UPDATE
   USING (auth.uid()::text = user_id);
 
 CREATE POLICY "Users can delete their own sessions"
-  ON sessions FOR DELETE
+  ON public.sessions FOR DELETE
   USING (auth.uid()::text = user_id);
+
+-- Drop existing segment policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Users can view segments from their sessions" ON public.transcription_segments;
+DROP POLICY IF EXISTS "Users can insert segments to their sessions" ON public.transcription_segments;
+DROP POLICY IF EXISTS "Users can update segments from their sessions" ON public.transcription_segments;
+DROP POLICY IF EXISTS "Users can delete segments from their sessions" ON public.transcription_segments;
 
 -- Transcription segments: Users can access segments from their sessions
 CREATE POLICY "Users can view segments from their sessions"
-  ON transcription_segments FOR SELECT
+  ON public.transcription_segments FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM sessions
+      SELECT 1 FROM public.sessions
       WHERE sessions.id = transcription_segments.session_id
       AND sessions.user_id = auth.uid()::text
     )
   );
 
 CREATE POLICY "Users can insert segments to their sessions"
-  ON transcription_segments FOR INSERT
+  ON public.transcription_segments FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM sessions
+      SELECT 1 FROM public.sessions
       WHERE sessions.id = transcription_segments.session_id
       AND sessions.user_id = auth.uid()::text
     )
   );
 
 CREATE POLICY "Users can update segments from their sessions"
-  ON transcription_segments FOR UPDATE
+  ON public.transcription_segments FOR UPDATE
   USING (
     EXISTS (
-      SELECT 1 FROM sessions
+      SELECT 1 FROM public.sessions
       WHERE sessions.id = transcription_segments.session_id
       AND sessions.user_id = auth.uid()::text
     )
   );
 
 CREATE POLICY "Users can delete segments from their sessions"
-  ON transcription_segments FOR DELETE
+  ON public.transcription_segments FOR DELETE
   USING (
     EXISTS (
-      SELECT 1 FROM sessions
+      SELECT 1 FROM public.sessions
       WHERE sessions.id = transcription_segments.session_id
       AND sessions.user_id = auth.uid()::text
     )
   );
+
+-- Drop existing storage policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Users can upload their own audio files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can read their own audio files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own audio files" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own audio files" ON storage.objects;
 
 -- Storage policies for audio recordings
 CREATE POLICY "Users can upload their own audio files"
@@ -144,10 +166,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Trigger to auto-update updated_at on sessions
-DROP TRIGGER IF EXISTS update_sessions_updated_at ON sessions;
+-- Triggers to auto-update updated_at
+DROP TRIGGER IF EXISTS update_sessions_updated_at ON public.sessions;
 CREATE TRIGGER update_sessions_updated_at
-  BEFORE UPDATE ON sessions
+  BEFORE UPDATE ON public.sessions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_segments_updated_at ON public.transcription_segments;
+CREATE TRIGGER update_segments_updated_at
+  BEFORE UPDATE ON public.transcription_segments
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
@@ -156,7 +184,7 @@ CREATE TRIGGER update_sessions_updated_at
 -- ============================================================================
 
 -- Create audit_logs table for comprehensive audit logging
-CREATE TABLE IF NOT EXISTS audit_logs (
+CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   action TEXT NOT NULL,
@@ -171,53 +199,59 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_id ON audit_logs(resource_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_retention_until ON audit_logs(retention_until);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created ON audit_logs(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON public.audit_logs(resource);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_id ON public.audit_logs(resource_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_retention_until ON public.audit_logs(retention_until);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created ON public.audit_logs(user_id, created_at DESC);
 
 -- Enable Row Level Security
-ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing audit log policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Users can view their own audit logs" ON public.audit_logs;
+DROP POLICY IF EXISTS "Prevent direct inserts" ON public.audit_logs;
+DROP POLICY IF EXISTS "Prevent updates" ON public.audit_logs;
+DROP POLICY IF EXISTS "Prevent deletes" ON public.audit_logs;
 
 -- Policy: Users can only view their own audit logs
 CREATE POLICY "Users can view their own audit logs"
-  ON audit_logs
+  ON public.audit_logs
   FOR SELECT
   USING (auth.uid()::text = user_id);
 
 -- Policy: Prevent users from inserting audit logs directly (only through API)
 CREATE POLICY "Prevent direct inserts"
-  ON audit_logs
+  ON public.audit_logs
   FOR INSERT
   WITH CHECK (false);
 
 -- Policy: Prevent users from updating audit logs
 CREATE POLICY "Prevent updates"
-  ON audit_logs
+  ON public.audit_logs
   FOR UPDATE
   USING (false);
 
 -- Policy: Prevent users from deleting audit logs
 CREATE POLICY "Prevent deletes"
-  ON audit_logs
+  ON public.audit_logs
   FOR DELETE
   USING (false);
 
 -- Add comments for documentation
-COMMENT ON TABLE audit_logs IS 'Audit log of all user actions for compliance and security';
-COMMENT ON COLUMN audit_logs.user_id IS 'User who performed the action';
-COMMENT ON COLUMN audit_logs.action IS 'Type of action performed (from AuditAction enum)';
-COMMENT ON COLUMN audit_logs.resource IS 'Type of resource affected (from AuditResource enum)';
-COMMENT ON COLUMN audit_logs.resource_id IS 'ID of the specific resource affected';
-COMMENT ON COLUMN audit_logs.metadata IS 'Additional context about the action';
-COMMENT ON COLUMN audit_logs.ip_address IS 'IP address of the user';
-COMMENT ON COLUMN audit_logs.user_agent IS 'User agent string from the request';
-COMMENT ON COLUMN audit_logs.location IS 'Geographic location (country code)';
-COMMENT ON COLUMN audit_logs.retention_until IS 'Date until which this log must be retained (legal hold)';
-COMMENT ON COLUMN audit_logs.created_at IS 'Timestamp when the action was performed';
+COMMENT ON TABLE public.audit_logs IS 'Audit log of all user actions for compliance and security';
+COMMENT ON COLUMN public.audit_logs.user_id IS 'User who performed the action';
+COMMENT ON COLUMN public.audit_logs.action IS 'Type of action performed (from AuditAction enum)';
+COMMENT ON COLUMN public.audit_logs.resource IS 'Type of resource affected (from AuditResource enum)';
+COMMENT ON COLUMN public.audit_logs.resource_id IS 'ID of the specific resource affected';
+COMMENT ON COLUMN public.audit_logs.metadata IS 'Additional context about the action';
+COMMENT ON COLUMN public.audit_logs.ip_address IS 'IP address of the user';
+COMMENT ON COLUMN public.audit_logs.user_agent IS 'User agent string from the request';
+COMMENT ON COLUMN public.audit_logs.location IS 'Geographic location (country code)';
+COMMENT ON COLUMN public.audit_logs.retention_until IS 'Date until which this log must be retained (legal hold)';
+COMMENT ON COLUMN public.audit_logs.created_at IS 'Timestamp when the action was performed';
 
 -- ============================================================================
 -- MIGRATION COMPLETE
