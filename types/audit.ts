@@ -37,6 +37,11 @@ export enum AuditAction {
   SEGMENT_DELETE = 'segment_delete',
   SEGMENT_MERGE = 'segment_merge',
   SEGMENT_SPLIT = 'segment_split',
+
+  // Version control operations
+  VERSION_CREATE = 'version_create',
+  VERSION_RESTORE = 'version_restore',
+  VERSION_COMPARE = 'version_compare',
 }
 
 export enum AuditResource {
