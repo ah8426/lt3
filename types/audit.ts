@@ -54,6 +54,13 @@ export enum AuditAction {
   SPEAKER_DELETE = 'speaker_delete',
   SPEAKER_MERGE = 'speaker_merge',
 
+  // Redaction operations
+  REDACTION_CREATE = 'redaction_create',
+  REDACTION_UPDATE = 'redaction_update',
+  REDACTION_DELETE = 'redaction_delete',
+  REDACTION_UNREDACT = 'redaction_unredact',
+  PII_DETECT = 'pii_detect',
+
   // View operations
   TRANSCRIPT_VIEW = 'transcript_view',
   SESSION_VIEW = 'session_view',

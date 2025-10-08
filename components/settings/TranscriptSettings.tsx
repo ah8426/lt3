@@ -18,7 +18,8 @@ import {
   AlertCircle,
   Info,
   Save,
-  Users
+  Users,
+  Lock
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -46,6 +47,14 @@ interface TranscriptPreferences {
   requireSpeakerNames: boolean
   showSpeakerTimeline: boolean
   colorCodeSpeakers: boolean
+
+  // PII Redaction
+  enableRedaction: boolean
+  autoDetectPII: boolean
+  redactionMinConfidence: number
+  requireRedactionReason: boolean
+  encryptRedactedContent: boolean
+  allowUnredaction: boolean
 }
 
 const DEFAULT_PREFERENCES: TranscriptPreferences = {
@@ -67,6 +76,12 @@ const DEFAULT_PREFERENCES: TranscriptPreferences = {
   requireSpeakerNames: false,
   showSpeakerTimeline: true,
   colorCodeSpeakers: true,
+  enableRedaction: true,
+  autoDetectPII: false,
+  redactionMinConfidence: 0.75,
+  requireRedactionReason: true,
+  encryptRedactedContent: true,
+  allowUnredaction: true,
 }
 
 export function TranscriptSettings() {
@@ -495,6 +510,147 @@ export function TranscriptSettings() {
               <Info className="h-4 w-4" />
               <AlertDescription>
                 Speaker diarization is disabled. All transcribed text will be unlabeled.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* PII Redaction Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Lock className="h-5 w-5" />
+            <CardTitle>PII Redaction</CardTitle>
+          </div>
+          <CardDescription>
+            Automatically detect and redact personally identifiable information
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Enable Redaction */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="enable-redaction">Enable PII Redaction</Label>
+              <p className="text-sm text-muted-foreground">
+                Detect and redact sensitive personal information in transcripts
+              </p>
+            </div>
+            <Switch
+              id="enable-redaction"
+              checked={preferences.enableRedaction}
+              onCheckedChange={(checked) => handleChange('enableRedaction', checked)}
+            />
+          </div>
+
+          {preferences.enableRedaction && (
+            <>
+              <Separator />
+
+              {/* Auto-detect PII */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="auto-detect-pii">Auto-detect PII</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically scan for PII when transcript is created
+                  </p>
+                </div>
+                <Switch
+                  id="auto-detect-pii"
+                  checked={preferences.autoDetectPII}
+                  onCheckedChange={(checked) => handleChange('autoDetectPII', checked)}
+                />
+              </div>
+
+              {/* Minimum Confidence */}
+              <div className="space-y-2">
+                <Label htmlFor="min-confidence">Minimum Detection Confidence</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="min-confidence"
+                    type="number"
+                    min={0.5}
+                    max={1.0}
+                    step={0.05}
+                    value={preferences.redactionMinConfidence}
+                    onChange={(e) =>
+                      handleChange('redactionMinConfidence', parseFloat(e.target.value) || 0.75)
+                    }
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {Math.round(preferences.redactionMinConfidence * 100)}% confidence threshold
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Higher values reduce false positives but may miss some PII
+                </p>
+              </div>
+
+              {/* Require Redaction Reason */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="require-reason">Require Redaction Reason</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require users to provide a reason when creating redactions
+                  </p>
+                </div>
+                <Switch
+                  id="require-reason"
+                  checked={preferences.requireRedactionReason}
+                  onCheckedChange={(checked) => handleChange('requireRedactionReason', checked)}
+                />
+              </div>
+
+              {/* Encrypt Redacted Content */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="encrypt-content">Encrypt Original Content</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Store original text encrypted (required for compliance)
+                  </p>
+                </div>
+                <Switch
+                  id="encrypt-content"
+                  checked={preferences.encryptRedactedContent}
+                  onCheckedChange={(checked) => handleChange('encryptRedactedContent', checked)}
+                  disabled={true} // Always required
+                />
+              </div>
+
+              {/* Allow Unredaction */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allow-unredact">Allow Unredaction</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Allow authorized users to view original redacted content
+                  </p>
+                </div>
+                <Switch
+                  id="allow-unredact"
+                  checked={preferences.allowUnredaction}
+                  onCheckedChange={(checked) => handleChange('allowUnredaction', checked)}
+                />
+              </div>
+            </>
+          )}
+
+          {!preferences.enableRedaction && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                PII redaction is disabled. Sensitive information will not be protected automatically.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {preferences.enableRedaction && (
+            <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200">
+                <strong>Legal Notice:</strong> Redaction does not delete information. Original content
+                is encrypted and stored. Ensure your encryption key (REDACTION_ENCRYPTION_KEY) is
+                properly secured. All unredaction actions are logged for audit purposes.
               </AlertDescription>
             </Alert>
           )}

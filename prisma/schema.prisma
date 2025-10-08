@@ -395,8 +395,48 @@ model Speaker {
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   segments        TranscriptSegment[]
 
-  @@unique([sessionId, name])
+  @@map("speakers")
+}
+
+// ============================================================================
+// REDACTION & PII
+// ============================================================================
+
+model Redaction {
+  id                  String   @id @default(cuid())
+  sessionId           String   @map("session_id")
+  segmentId           String?  @map("segment_id")
+
+  // Encrypted original text
+  encryptedOriginal   String   @map("encrypted_original")
+  encryptionNonce     String   @map("encryption_nonce")
+
+  // Redacted representation
+  redactedText        String   @map("redacted_text")
+  piiType             String   @map("pii_type") // ssn, credit_card, etc.
+
+  // Position in text
+  startOffset         Int      @map("start_offset")
+  endOffset           Int      @map("end_offset")
+
+  // Metadata
+  reason              String?
+  legalBasis          String?  @map("legal_basis")
+
+  // Access control
+  createdBy           String   @map("created_by")
+  accessControl       Json     @default("[]") @map("access_control") // Array of user IDs
+
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  // Relations
+  session             Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  segment             TranscriptSegment? @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+
   @@index([sessionId])
+  @@index([segmentId])
+  @@index([piiType])
+  @@map("redactions")
 }
 
 // ============================================================================
