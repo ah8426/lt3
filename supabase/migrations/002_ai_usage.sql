@@ -1,5 +1,5 @@
 -- AI Usage Tracking Table
-CREATE TABLE IF NOT EXISTS ai_usage (
+CREATE TABLE IF NOT EXISTS public.ai_usage (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   provider TEXT NOT NULL,
@@ -14,22 +14,22 @@ CREATE TABLE IF NOT EXISTS ai_usage (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_ai_usage_user_id ON ai_usage(user_id);
-CREATE INDEX IF NOT EXISTS idx_ai_usage_provider ON ai_usage(provider);
-CREATE INDEX IF NOT EXISTS idx_ai_usage_model ON ai_usage(model);
-CREATE INDEX IF NOT EXISTS idx_ai_usage_created_at ON ai_usage(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON ai_usage(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_user_id ON public.ai_usage(user_id);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_provider ON public.ai_usage(provider);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_model ON public.ai_usage(model);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_created_at ON public.ai_usage(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON public.ai_usage(user_id, created_at DESC);
 
 -- Row Level Security
-ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_usage ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only view their own usage
-CREATE POLICY ai_usage_select_own ON ai_usage
+CREATE POLICY ai_usage_select_own ON public.ai_usage
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
 
 -- Policy: System can insert usage records (handled by server-side code)
-CREATE POLICY ai_usage_insert_system ON ai_usage
+CREATE POLICY ai_usage_insert_system ON public.ai_usage
   FOR INSERT
   WITH CHECK (true);
 
@@ -126,9 +126,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Comment on table
-COMMENT ON TABLE ai_usage IS 'Tracks AI API usage and costs for billing and analytics';
-COMMENT ON COLUMN ai_usage.provider IS 'AI provider name (anthropic, openai, google, openrouter)';
-COMMENT ON COLUMN ai_usage.model IS 'Model identifier used for the request';
-COMMENT ON COLUMN ai_usage.cost IS 'Cost in USD for the request';
-COMMENT ON COLUMN ai_usage.purpose IS 'Optional purpose/category for the request';
-COMMENT ON COLUMN ai_usage.metadata IS 'Additional metadata about the request';
+COMMENT ON TABLE public.ai_usage IS 'Tracks AI API usage and costs for billing and analytics';
+COMMENT ON COLUMN public.ai_usage.provider IS 'AI provider name (anthropic, openai, google, openrouter)';
+COMMENT ON COLUMN public.ai_usage.model IS 'Model identifier used for the request';
+COMMENT ON COLUMN public.ai_usage.cost IS 'Cost in USD for the request';
+COMMENT ON COLUMN public.ai_usage.purpose IS 'Optional purpose/category for the request';
+COMMENT ON COLUMN public.ai_usage.metadata IS 'Additional metadata about the request';

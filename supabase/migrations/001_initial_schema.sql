@@ -139,42 +139,118 @@ ALTER TABLE public.encrypted_api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Sessions policies
-CREATE POLICY "Users can view own sessions" ON public.sessions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own sessions" ON public.sessions FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own sessions" ON public.sessions FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own sessions" ON public.sessions FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own sessions" ON public.sessions
+  FOR SELECT
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can create own sessions" ON public.sessions
+  FOR INSERT
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can update own sessions" ON public.sessions
+  FOR UPDATE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can delete own sessions" ON public.sessions
+  FOR DELETE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
 
 -- Segments policies
-CREATE POLICY "Users can view own segments" ON public.transcription_segments FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.sessions WHERE sessions.id = transcription_segments.session_id AND sessions.user_id = auth.uid()));
-CREATE POLICY "Users can create own segments" ON public.transcription_segments FOR INSERT
-  WITH CHECK (EXISTS (SELECT 1 FROM public.sessions WHERE sessions.id = transcription_segments.session_id AND sessions.user_id = auth.uid()));
-CREATE POLICY "Users can update own segments" ON public.transcription_segments FOR UPDATE
-  USING (EXISTS (SELECT 1 FROM public.sessions WHERE sessions.id = transcription_segments.session_id AND sessions.user_id = auth.uid()));
-CREATE POLICY "Users can delete own segments" ON public.transcription_segments FOR DELETE
-  USING (EXISTS (SELECT 1 FROM public.sessions WHERE sessions.id = transcription_segments.session_id AND sessions.user_id = auth.uid()));
+CREATE POLICY "Users can view own segments" ON public.transcription_segments
+  FOR SELECT
+  USING ((SELECT auth.uid()) IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.sessions s
+    WHERE s.id = transcription_segments.session_id AND s.user_id = (SELECT auth.uid())
+  ));
+
+CREATE POLICY "Users can create own segments" ON public.transcription_segments
+  FOR INSERT
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.sessions s
+    WHERE s.id = transcription_segments.session_id AND s.user_id = (SELECT auth.uid())
+  ));
+
+CREATE POLICY "Users can update own segments" ON public.transcription_segments
+  FOR UPDATE
+  USING ((SELECT auth.uid()) IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.sessions s
+    WHERE s.id = transcription_segments.session_id AND s.user_id = (SELECT auth.uid())
+  ))
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.sessions s
+    WHERE s.id = transcription_segments.session_id AND s.user_id = (SELECT auth.uid())
+  ));
+
+CREATE POLICY "Users can delete own segments" ON public.transcription_segments
+  FOR DELETE
+  USING ((SELECT auth.uid()) IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.sessions s
+    WHERE s.id = transcription_segments.session_id AND s.user_id = (SELECT auth.uid())
+  ));
 
 -- Edit history policies
-CREATE POLICY "Users can view edit history for own segments" ON public.segment_edit_history FOR SELECT
-  USING (EXISTS (SELECT 1 FROM public.transcription_segments ts JOIN public.sessions s ON s.id = ts.session_id WHERE ts.id = segment_edit_history.segment_id AND s.user_id = auth.uid()));
-CREATE POLICY "Users can create edit history" ON public.segment_edit_history FOR INSERT WITH CHECK (auth.uid() = edited_by);
+CREATE POLICY "Users can view edit history for own segments" ON public.segment_edit_history
+  FOR SELECT
+  USING ((SELECT auth.uid()) IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.transcription_segments ts
+    JOIN public.sessions s ON s.id = ts.session_id
+    WHERE ts.id = segment_edit_history.segment_id AND s.user_id = (SELECT auth.uid())
+  ));
+
+CREATE POLICY "Users can create edit history" ON public.segment_edit_history
+  FOR INSERT
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = edited_by);
 
 -- Matters policies
-CREATE POLICY "Users can view own matters" ON public.matters FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own matters" ON public.matters FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own matters" ON public.matters FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own matters" ON public.matters FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own matters" ON public.matters
+  FOR SELECT
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can create own matters" ON public.matters
+  FOR INSERT
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can update own matters" ON public.matters
+  FOR UPDATE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can delete own matters" ON public.matters
+  FOR DELETE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
 
 -- API keys policies
-CREATE POLICY "Users can view own API keys" ON public.encrypted_api_keys FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can create own API keys" ON public.encrypted_api_keys FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Users can update own API keys" ON public.encrypted_api_keys FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Users can delete own API keys" ON public.encrypted_api_keys FOR DELETE USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own API keys" ON public.encrypted_api_keys
+  FOR SELECT
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can create own API keys" ON public.encrypted_api_keys
+  FOR INSERT
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can update own API keys" ON public.encrypted_api_keys
+  FOR UPDATE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can delete own API keys" ON public.encrypted_api_keys
+  FOR DELETE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
 
 -- Profiles policies
-CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can insert own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can view own profile" ON public.profiles
+  FOR SELECT
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = id);
+
+CREATE POLICY "Users can update own profile" ON public.profiles
+  FOR UPDATE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = id)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = id);
+
+CREATE POLICY "Users can insert own profile" ON public.profiles
+  FOR INSERT
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = id);
 
 -- ============================================================================
 -- 4. FUNCTIONS AND TRIGGERS
