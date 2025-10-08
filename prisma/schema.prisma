@@ -192,6 +192,7 @@ model Matter {
 
   @@index([userId, status])
   @@index([clientName])
+  @@map("matters")
 }
 
 model Session {
