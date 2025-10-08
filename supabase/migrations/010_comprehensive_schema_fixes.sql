@@ -93,6 +93,16 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Fix foreign key constraint to CASCADE instead of SET NULL (incompatible with NOT NULL)
+ALTER TABLE public.sessions
+  DROP CONSTRAINT IF EXISTS fk_sessions_matter;
+
+ALTER TABLE public.sessions
+  ADD CONSTRAINT fk_sessions_matter
+  FOREIGN KEY (matter_id)
+  REFERENCES public.matters(id)
+  ON DELETE CASCADE;
+
 -- Now set NOT NULL constraint (should be safe now)
 ALTER TABLE public.sessions
   ALTER COLUMN matter_id SET NOT NULL;
@@ -148,11 +158,24 @@ BEGIN
 END $$;
 
 -- Remove updated_at column (Prisma doesn't have it)
+-- First drop the trigger that updates this column
+DROP TRIGGER IF EXISTS segments_updated_at ON public.transcription_segments;
 ALTER TABLE public.transcription_segments DROP COLUMN IF EXISTS updated_at;
+
+-- Recreate speaker stats trigger after column renames
+DROP TRIGGER IF EXISTS update_speaker_stats_trigger ON public.transcription_segments;
+CREATE TRIGGER update_speaker_stats_trigger
+  AFTER INSERT OR UPDATE OR DELETE ON public.transcription_segments
+  FOR EACH ROW
+  WHEN (NEW.speaker_id IS NOT NULL OR OLD.speaker_id IS NOT NULL)
+  EXECUTE FUNCTION trigger_update_speaker_stats();
 
 -- Update indexes
 CREATE INDEX IF NOT EXISTS idx_transcription_segments_session_start
   ON public.transcription_segments(session_id, start_ms);
+
+-- Drop redundant index (new composite index covers it)
+DROP INDEX IF EXISTS idx_segments_session;
 
 -- ============================================================================
 -- PART 3: DROP ORPHANED SEGMENT_EDIT_HISTORY TABLE
@@ -237,12 +260,46 @@ CREATE INDEX IF NOT EXISTS idx_profiles_subscription ON public.profiles(subscrip
 -- PART 6: FIX ENCRYPTED_API_KEYS TABLE
 -- ============================================================================
 
--- Fix provider constraint to use 'google' instead of 'google-ai'
-ALTER TABLE public.encrypted_api_keys
-  DROP CONSTRAINT IF EXISTS encrypted_api_keys_provider_check;
-ALTER TABLE public.encrypted_api_keys
-  ADD CONSTRAINT encrypted_api_keys_provider_check
-  CHECK (provider IN ('deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'));
+-- Check if provider column is using an ENUM type or CHECK constraint
+DO $$
+BEGIN
+  -- First, check if there's an ENUM type
+  IF EXISTS (
+    SELECT 1 FROM pg_type WHERE typname = 'encrypted_api_provider'
+  ) THEN
+    -- Check if 'google' value already exists in enum
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_enum e
+      JOIN pg_type t ON e.enumtypid = t.oid
+      WHERE t.typname = 'encrypted_api_provider' AND e.enumlabel = 'google'
+    ) THEN
+      ALTER TYPE encrypted_api_provider ADD VALUE 'google';
+    END IF;
+
+    -- Only update if 'google-ai' exists as enum value
+    IF EXISTS (
+      SELECT 1 FROM pg_enum e
+      JOIN pg_type t ON e.enumtypid = t.oid
+      WHERE t.typname = 'encrypted_api_provider' AND e.enumlabel = 'google-ai'
+    ) THEN
+      -- Temporarily convert to text, update, then back to enum
+      ALTER TABLE public.encrypted_api_keys ALTER COLUMN provider TYPE TEXT;
+      UPDATE public.encrypted_api_keys SET provider = 'google' WHERE provider = 'google-ai';
+      ALTER TABLE public.encrypted_api_keys
+        ALTER COLUMN provider TYPE encrypted_api_provider
+        USING provider::encrypted_api_provider;
+    END IF;
+
+    -- Note: We can't remove enum values in PostgreSQL, but data is migrated
+  ELSE
+    -- It's a CHECK constraint, fix it
+    ALTER TABLE public.encrypted_api_keys
+      DROP CONSTRAINT IF EXISTS encrypted_api_keys_provider_check;
+    ALTER TABLE public.encrypted_api_keys
+      ADD CONSTRAINT encrypted_api_keys_provider_check
+      CHECK (provider IN ('deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'));
+  END IF;
+END $$;
 
 -- ============================================================================
 -- PART 7: CREATE MISSING TABLES
@@ -653,24 +710,18 @@ CREATE POLICY "Service role can manage system logs" ON public.system_logs
 -- PART 9: ADD TRIGGERS FOR NEW TABLES
 -- ============================================================================
 
--- Create or replace the update_updated_at function if it doesn't exist
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Note: update_updated_at() function already exists from migration 001
+-- No need to create it again
 
--- Add triggers
+-- Add triggers (use existing update_updated_at function from migration 001)
 CREATE TRIGGER subscription_plans_updated_at BEFORE UPDATE ON public.subscription_plans
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER document_templates_updated_at BEFORE UPDATE ON public.document_templates
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER feature_flags_updated_at BEFORE UPDATE ON public.feature_flags
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- ============================================================================
 -- PART 10: ADD HELPFUL COMMENTS
