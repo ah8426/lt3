@@ -42,6 +42,11 @@ export enum AuditAction {
   VERSION_CREATE = 'version_create',
   VERSION_RESTORE = 'version_restore',
   VERSION_COMPARE = 'version_compare',
+
+  // Timestamp operations
+  TIMESTAMP_CREATE = 'timestamp_create',
+  TIMESTAMP_VERIFY = 'timestamp_verify',
+  TIMESTAMP_EXPORT = 'timestamp_export',
 }
 
 export enum AuditResource {
