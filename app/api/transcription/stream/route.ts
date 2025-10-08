@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
+import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { decryptAPIKey } from '@/lib/server/encryption/key-manager';
 import { createASRProviderManager } from '@/lib/asr/provider-manager';
