@@ -2,6 +2,9 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { AuditAction, AuditResource, AuditLog } from '@/types/audit';
 import { headers } from 'next/headers';
 
+// Re-export types for convenience
+export { AuditAction, AuditResource, AuditLog } from '@/types/audit';
+
 interface LogActionParams {
   userId: string;
   action: AuditAction;

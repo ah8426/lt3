@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/server/db'
-import { logAction } from '@/lib/audit/audit-logger'
+import { logAction } from '@/lib/audit/logger'
 import { AuditAction, AuditResource } from '@/types/audit'
 
 export interface Speaker {
