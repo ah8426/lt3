@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { logAction } from '@/lib/audit/logger'
+import { AuditAction, AuditResource } from '@/types/audit'
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
@@ -12,6 +14,10 @@ export async function GET(request: Request) {
   // Handle OAuth errors
   if (error) {
     console.error('OAuth error:', error, errorDescription)
+
+    // Log failed login attempt (without user ID since we don't have one)
+    // This will fail gracefully since we need a user ID
+
     return NextResponse.redirect(
       `${origin}/auth/error?error=${encodeURIComponent(error)}&message=${encodeURIComponent(errorDescription || 'Authentication failed')}`
     )
@@ -34,6 +40,16 @@ export async function GET(request: Request) {
       if (data.session) {
         // Get or create user profile in database
         const { user } = data.session
+
+        // Log successful login
+        await logAction({
+          userId: user.id,
+          action: AuditAction.LOGIN,
+          resource: AuditResource.USER,
+          metadata: {
+            provider: user.app_metadata.provider || 'unknown',
+          },
+        })
 
         // Check if user exists in profiles table
         const { data: profile, error: profileError } = await supabase

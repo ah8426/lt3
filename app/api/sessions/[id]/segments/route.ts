@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logAction } from '@/lib/audit/logger';
+import { AuditAction, AuditResource } from '@/types/audit';
 
 export const runtime = 'nodejs';
 
@@ -125,6 +127,18 @@ export async function POST(
       return NextResponse.json({ error: createError.message }, { status: 500 });
     }
 
+    // Log segment creation
+    await logAction({
+      userId: user.id,
+      action: AuditAction.SEGMENT_CREATE,
+      resource: AuditResource.SEGMENT,
+      resourceId: segment.id,
+      metadata: {
+        sessionId,
+        speaker,
+      },
+    });
+
     return NextResponse.json({ segment }, { status: 201 });
   } catch (error) {
     console.error('Create segment error:', error);
@@ -218,6 +232,18 @@ export async function PATCH(
       new_text: text,
     });
 
+    // Log segment update
+    await logAction({
+      userId: user.id,
+      action: AuditAction.SEGMENT_UPDATE,
+      resource: AuditResource.SEGMENT,
+      resourceId: segment_id,
+      metadata: {
+        sessionId,
+        updatedFields: Object.keys(updates).filter(k => k !== 'updated_at'),
+      },
+    });
+
     return NextResponse.json({ segment });
   } catch (error) {
     console.error('Update segment error:', error);
@@ -282,6 +308,17 @@ export async function DELETE(
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
+
+    // Log segment deletion
+    await logAction({
+      userId: user.id,
+      action: AuditAction.SEGMENT_DELETE,
+      resource: AuditResource.SEGMENT,
+      resourceId: segmentId,
+      metadata: {
+        sessionId,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

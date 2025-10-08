@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logAction } from '@/lib/audit/logger';
+import { AuditAction, AuditResource } from '@/types/audit';
 
 export const runtime = 'nodejs';
 
@@ -137,6 +139,17 @@ export async function PATCH(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
+    // Log session update
+    await logAction({
+      userId: user.id,
+      action: AuditAction.SESSION_UPDATE,
+      resource: AuditResource.SESSION,
+      resourceId: sessionId,
+      metadata: {
+        updatedFields: Object.keys(updates).filter(k => k !== 'updated_at'),
+      },
+    });
+
     return NextResponse.json({ session });
   } catch (error) {
     console.error('Update session error:', error);
@@ -203,6 +216,17 @@ export async function DELETE(
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
+
+    // Log session deletion
+    await logAction({
+      userId: user.id,
+      action: AuditAction.SESSION_DELETE,
+      resource: AuditResource.SESSION,
+      resourceId: sessionId,
+      metadata: {
+        hadAudio: !!session.audio_url,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

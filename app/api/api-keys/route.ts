@@ -3,6 +3,8 @@ import { getUser } from '@/lib/supabase/auth';
 import { prisma } from '@/lib/prisma';
 import { encryptAPIKey, maskAPIKey, validateAPIKeyFormat } from '@/lib/server/encryption/key-manager';
 import { z } from 'zod';
+import { logAction } from '@/lib/audit/logger';
+import { AuditAction, AuditResource } from '@/types/audit';
 
 // ============================================================================
 // GET /api/api-keys - List all API keys for the authenticated user
@@ -98,6 +100,18 @@ export async function POST(request: NextRequest) {
     const encryptedKey = await encryptAPIKey(apiKey, user.id);
     const maskedKey = maskAPIKey(apiKey);
 
+    // Check if key exists to determine action
+    const existingKey = await prisma.encryptedApiKey.findUnique({
+      where: {
+        userId_provider: {
+          userId: user.id,
+          provider,
+        },
+      },
+    });
+
+    const isUpdate = !!existingKey;
+
     // Upsert (insert or update)
     const savedKey = await prisma.encryptedApiKey.upsert({
       where: {
@@ -127,6 +141,17 @@ export async function POST(request: NextRequest) {
         maskedKey: true,
         createdAt: true,
         updatedAt: true,
+      },
+    });
+
+    // Log API key creation or update
+    await logAction({
+      userId: user.id,
+      action: isUpdate ? AuditAction.API_KEY_UPDATE : AuditAction.API_KEY_CREATE,
+      resource: AuditResource.API_KEY,
+      resourceId: savedKey.id,
+      metadata: {
+        provider,
       },
     });
 
@@ -170,8 +195,27 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Get key ID before deletion
+    const keyToDelete = await prisma.encryptedApiKey.findFirst({
+      where: {
+        userId: user.id,
+        provider,
+        isActive: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!keyToDelete) {
+      return NextResponse.json(
+        { error: 'API key not found' },
+        { status: 404 }
+      );
+    }
+
     // Soft delete (set isActive to false)
-    const result = await prisma.encryptedApiKey.updateMany({
+    await prisma.encryptedApiKey.updateMany({
       where: {
         userId: user.id,
         provider,
@@ -183,12 +227,16 @@ export async function DELETE(request: NextRequest) {
       },
     });
 
-    if (result.count === 0) {
-      return NextResponse.json(
-        { error: 'API key not found' },
-        { status: 404 }
-      );
-    }
+    // Log API key deletion
+    await logAction({
+      userId: user.id,
+      action: AuditAction.API_KEY_DELETE,
+      resource: AuditResource.API_KEY,
+      resourceId: keyToDelete.id,
+      metadata: {
+        provider,
+      },
+    });
 
     return NextResponse.json({
       message: 'API key deleted successfully',

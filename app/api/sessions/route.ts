@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { logAction } from '@/lib/audit/logger';
+import { AuditAction, AuditResource } from '@/types/audit';
 
 export const runtime = 'nodejs';
 
@@ -85,6 +87,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Log session creation or update
+      await logAction({
+        userId: user.id,
+        action: AuditAction.SESSION_CREATE,
+        resource: AuditResource.SESSION,
+        resourceId: sessionId,
+        metadata: {
+          title,
+          status,
+          hasAudio: !!audioFile,
+        },
+      });
+
       // Save segments if provided
       if (segmentsJson) {
         const segments = JSON.parse(segmentsJson);
@@ -157,6 +172,18 @@ export async function POST(request: NextRequest) {
     if (sessionError) {
       return NextResponse.json({ error: sessionError.message }, { status: 500 });
     }
+
+    // Log session creation or update
+    await logAction({
+      userId: user.id,
+      action: AuditAction.SESSION_UPDATE,
+      resource: AuditResource.SESSION,
+      resourceId: sessionId,
+      metadata: {
+        title,
+        status,
+      },
+    });
 
     // Save segments if provided
     if (segments && segments.length > 0) {

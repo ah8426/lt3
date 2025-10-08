@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
 import { prisma } from '@/lib/prisma';
 import { decryptAPIKey } from '@/lib/server/encryption/key-manager';
+import { logAction } from '@/lib/audit/logger';
+import { AuditAction, AuditResource } from '@/types/audit';
 
 /**
  * Test API key connection
@@ -141,6 +143,18 @@ export async function POST(request: NextRequest) {
           lastTestedAt: new Date(),
           testStatus: testResult.success ? 'success' : 'failed',
           testError: testResult.error,
+        },
+      });
+
+      // Log API key test
+      await logAction({
+        userId: user.id,
+        action: AuditAction.API_KEY_TEST,
+        resource: AuditResource.API_KEY,
+        resourceId: apiKeyRecordId,
+        metadata: {
+          provider,
+          success: testResult.success,
         },
       });
     }
