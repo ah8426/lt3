@@ -232,6 +232,7 @@ model Session {
   accessLogs            TranscriptAccessLog[]
   redactions            Redaction[]
   speakers              Speaker[]
+  timestampProofs       TimestampProof[]
   exportJobs            ExportJob[]
   billableTime          BillableTime[]
   generatedDocs         GeneratedDocument[]
@@ -329,44 +330,13 @@ model TimestampProof {
 
   createdAt       DateTime @default(now())
 
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   segment         TranscriptSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
 
   @@unique([segmentId])
   @@index([sessionId, timestamp])
   @@index([isVerified, timestamp])
-}
-
-// ============================================================================
-// FEATURE 4: REDACTION & PII PROTECTION
-// ============================================================================
-
-model Redaction {
-  id              String   @id @default(cuid())
-  sessionId       String
-  segmentId       String
-
-  originalText    String   @db.Text
-  redactedText    String
-  redactionType   String
-
-  startOffset     Int
-  endOffset       Int
-
-  redactedBy      String
-  unredactableBy  String[]
-
-  reason          String?
-  legalBasis      String?
-
-  createdAt       DateTime @default(now())
-  expiresAt       DateTime?
-
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  segment         TranscriptSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
-
-  @@index([sessionId])
-  @@index([segmentId])
-  @@index([redactionType])
+  @@map("timestamp_proofs")
 }
 
 // ============================================================================
