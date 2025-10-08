@@ -63,8 +63,37 @@ ALTER TABLE public.sessions
   ALTER COLUMN title DROP NOT NULL;
 
 -- Make matter_id NOT NULL (Prisma expects required field)
--- First set a default for any existing NULL values
-UPDATE public.sessions SET matter_id = 'LEGACY' WHERE matter_id IS NULL;
+-- First, handle any existing NULL values by creating a LEGACY matter for each user
+DO $$
+DECLARE
+  user_record RECORD;
+  legacy_matter_id TEXT;
+BEGIN
+  -- For each user with NULL matter_id sessions, create a LEGACY matter
+  FOR user_record IN
+    SELECT DISTINCT user_id
+    FROM public.sessions
+    WHERE matter_id IS NULL
+  LOOP
+    -- Create a LEGACY matter for this user
+    INSERT INTO public.matters (id, user_id, name, client_name, status)
+    VALUES (
+      'legacy-' || user_record.user_id,
+      user_record.user_id,
+      'Legacy Matter (Auto-Created)',
+      'Legacy Client',
+      'archived'
+    )
+    ON CONFLICT (id) DO NOTHING;
+
+    -- Update sessions to point to this LEGACY matter
+    UPDATE public.sessions
+    SET matter_id = 'legacy-' || user_record.user_id
+    WHERE matter_id IS NULL AND user_id = user_record.user_id;
+  END LOOP;
+END $$;
+
+-- Now set NOT NULL constraint (should be safe now)
 ALTER TABLE public.sessions
   ALTER COLUMN matter_id SET NOT NULL;
 
