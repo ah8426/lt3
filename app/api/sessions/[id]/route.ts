@@ -58,7 +58,7 @@ export async function GET(
     let audioUrl: string | null = null;
     if (session.audio_url) {
       const { data } = await supabase.storage
-        .from('audio-files')
+        .from('audio-recordings')
         .createSignedUrl(session.audio_url, 3600); // 1 hour expiry
 
       if (data) {
