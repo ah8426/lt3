@@ -17,28 +17,29 @@ datasource db {
 // ============================================================================
 
 model User {
-  id              String    @id @default(cuid())
+  id              String    @id @db.Uuid
   email           String    @unique
-  fullName        String?
-  provider        String    // 'google' or 'microsoft'
-  providerId      String
-  firmId          String?
+  fullName        String?   @map("full_name")
+  avatarUrl       String?   @map("avatar_url")
+  provider        String?   // 'google' or 'microsoft'
+  providerId      String?   @map("provider_id")
+  firmId          String?   @map("firm_id") @db.Uuid
   roles           String[]  @default(["user"])
 
   // Subscription
-  subscriptionTier    String   @default("free") // free, starter, professional, enterprise
-  subscriptionStatus  String   @default("active") // active, trialing, past_due, canceled
-  stripeCustomerId    String?  @unique
-  stripeSubscriptionId String? @unique
-  subscriptionEndsAt  DateTime?
-  trialEndsAt         DateTime?
+  subscriptionTier    String   @default("free") @map("subscription_tier") // free, starter, professional, enterprise
+  subscriptionStatus  String   @default("active") @map("subscription_status") // active, trialing, past_due, canceled
+  stripeCustomerId    String?  @unique @map("stripe_customer_id")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  subscriptionEndsAt  DateTime? @map("subscription_ends_at")
+  trialEndsAt         DateTime? @map("trial_ends_at")
 
   // User Settings (includes feature toggles)
   settings        Json      @default("{}")
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  lastLoginAt     DateTime?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastLoginAt     DateTime? @map("last_login_at")
 
   // Relations
   matters         Matter[]
@@ -50,15 +51,17 @@ model User {
   billableTime    BillableTime[]
   templates       DocumentTemplate[]
   generatedDocs   GeneratedDocument[]
+  aiUsage         ai_usage[]
 
   @@index([email])
   @@index([firmId])
   @@index([subscriptionTier, subscriptionStatus])
+  @@map("profiles")
 }
 
 model EncryptedApiKey {
   id              String   @id @default(cuid())
-  userId          String   @map("user_id")
+  userId          String   @map("user_id") @db.Uuid
   provider        String   // 'deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'
   encryptedKey    String   @map("encrypted_key") @db.Text // Format: version:nonce:ciphertext
   maskedKey       String?  @map("masked_key") // For display: "sk-12••••••3456"
@@ -114,7 +117,7 @@ model SubscriptionPlan {
 
 model Invoice {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String   @db.Uuid
   stripeInvoiceId String   @unique
 
   // Invoice details
@@ -141,7 +144,7 @@ model Invoice {
 
 model UsageMetrics {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String   @db.Uuid
 
   // Period
   periodStart     DateTime
@@ -178,7 +181,7 @@ model Matter {
   courtType       String?
   caseNumber      String?
   status          String   @default("active")
-  userId          String
+  userId          String   @db.Uuid
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -195,7 +198,7 @@ model Matter {
 model Session {
   id                    String    @id @default(cuid())
   matterId              String
-  userId                String
+  userId                String    @db.Uuid
 
   status                String    @default("active")
   title                 String?
@@ -244,37 +247,38 @@ model Session {
 
 model AuditLog {
   id              String    @id @default(cuid())
-  userId          String?
-  sessionId       String?
-  matterId        String?
+  userId          String?   @map("user_id") @db.Uuid
+  sessionId       String?   @map("session_id")
+  matterId        String?   @map("matter_id")
 
   action          String
   resource        String
-  resourceId      String?
+  resourceId      String?   @map("resource_id")
 
-  clientName      String?
+  clientName      String?   @map("client_name")
 
-  oldValue        Json?
-  newValue        Json?
-  changeReason    String?
+  oldValue        Json?     @map("old_value")
+  newValue        Json?     @map("new_value")
+  changeReason    String?   @map("change_reason")
 
-  ipAddress       String?
-  userAgent       String?
+  ipAddress       String?   @map("ip_address")
+  userAgent       String?   @map("user_agent")
   location        String?
 
-  retentionUntil  DateTime?
-  isPrivileged    Boolean   @default(true)
+  retentionUntil  DateTime? @map("retention_until")
+  isPrivileged    Boolean   @default(true) @map("is_privileged")
 
   metadata        Json      @default("{}")
-  timestamp       DateTime  @default(now())
+  createdAt       DateTime  @default(now()) @map("created_at")
 
   user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([userId, timestamp])
-  @@index([sessionId, timestamp])
-  @@index([matterId, timestamp])
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([matterId, createdAt])
   @@index([action, resource])
-  @@index([clientName, timestamp])
+  @@index([clientName, createdAt])
+  @@map("audit_logs")
 }
 
 // ============================================================================
@@ -432,7 +436,7 @@ model TranscriptSegment {
 model TranscriptAccessLog {
   id              String   @id @default(cuid())
   sessionId       String
-  userId          String?
+  userId          String?  @db.Uuid
   accessType      String
   accessMethod    String
   timestamp       DateTime @default(now())
@@ -476,17 +480,19 @@ model ChatMessage {
 // ============================================================================
 
 model ai_usage {
-  id                  String   @id @default(cuid())
-  user_id             String
+  id                  String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
+  user_id             String   @db.Uuid
   provider            String
   model               String
   prompt_tokens       Int      @default(0)
   completion_tokens   Int      @default(0)
   total_tokens        Int      @default(0)
-  cost                Float    @default(0)
+  cost                Decimal  @default(0) @db.Decimal(10, 6)
   purpose             String?
   metadata            Json?
   created_at          DateTime @default(now())
+
+  user                User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id, created_at])
   @@index([provider, model])
@@ -547,7 +553,7 @@ model Citation {
 model ExportJob {
   id                      String   @id @default(cuid())
   sessionId               String
-  userId                  String
+  userId                  String   @db.Uuid
 
   format                  String
   template                String?
@@ -582,7 +588,7 @@ model ExportJob {
 
 model DocumentTemplate {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String   @db.Uuid
   name            String
   description     String?  @db.Text
 
@@ -614,7 +620,7 @@ model GeneratedDocument {
   templateId      String
   sessionId       String?
   matterId        String
-  userId          String
+  userId          String   @db.Uuid
 
   fileName        String
   fileUrl         String
@@ -645,7 +651,7 @@ model GeneratedDocument {
 
 model ConflictCheck {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String   @db.Uuid
 
   partyNames      String[]
   companyNames    String[]
@@ -675,7 +681,7 @@ model ConflictCheck {
 
 model Backup {
   id              String   @id @default(cuid())
-  userId          String?
+  userId          String?  @db.Uuid
 
   type            String
   scope           String
@@ -714,7 +720,7 @@ model BillableTime {
   id              String   @id @default(cuid())
   sessionId       String
   matterId        String
-  userId          String
+  userId          String   @db.Uuid
 
   startTime       DateTime
   endTime         DateTime

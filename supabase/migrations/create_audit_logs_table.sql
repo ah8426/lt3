@@ -1,26 +1,32 @@
 -- Create audit_logs table
 CREATE TABLE IF NOT EXISTS public.audit_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  session_id TEXT,
+  matter_id TEXT,
   action TEXT NOT NULL,
   resource TEXT NOT NULL,
   resource_id TEXT,
-  metadata JSONB,
+  client_name TEXT,
+  old_value JSONB,
+  new_value JSONB,
+  change_reason TEXT,
+  metadata JSONB DEFAULT '{}',
   ip_address TEXT,
   user_agent TEXT,
   location TEXT,
   retention_until TIMESTAMP WITH TIME ZONE,
+  is_privileged BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.audit_logs(action);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON public.audit_logs(resource);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_resource_id ON public.audit_logs(resource_id);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id_created ON public.audit_logs(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_session_id_created ON public.audit_logs(session_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_matter_id_created ON public.audit_logs(matter_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action_resource ON public.audit_logs(action, resource);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_client_name_created ON public.audit_logs(client_name, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_retention_until ON public.audit_logs(retention_until);
-CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created ON public.audit_logs(user_id, created_at DESC);
 
 -- Enable Row Level Security
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
