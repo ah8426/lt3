@@ -113,6 +113,7 @@ model SubscriptionPlan {
   updatedAt       DateTime @updatedAt
 
   @@index([isActive, sortOrder])
+  @@map("subscription_plans")
 }
 
 model Invoice {
@@ -140,6 +141,7 @@ model Invoice {
 
   @@index([userId, createdAt])
   @@index([status])
+  @@map("invoices")
 }
 
 model UsageMetrics {
@@ -166,6 +168,7 @@ model UsageMetrics {
 
   @@unique([userId, periodStart])
   @@index([userId, periodEnd])
+  @@map("usage_metrics")
 }
 
 // ============================================================================
@@ -240,6 +243,7 @@ model Session {
   @@index([userId, status, startedAt])
   @@index([matterId, startedAt])
   @@index([shareToken])
+  @@map("sessions")
 }
 
 // ============================================================================
@@ -306,6 +310,7 @@ model TranscriptVersion {
   @@unique([sessionId, version])
   @@index([sessionId, createdAt])
   @@index([changedBy, createdAt])
+  @@map("transcript_versions")
 }
 
 // ============================================================================
@@ -441,6 +446,7 @@ model TranscriptSegment {
 
   @@index([sessionId, startMs])
   @@index([speakerId])
+  @@map("transcript_segments")
 }
 
 model TranscriptAccessLog {
@@ -457,6 +463,7 @@ model TranscriptAccessLog {
 
   @@index([sessionId, timestamp])
   @@index([userId, timestamp])
+  @@map("transcript_access_logs")
 }
 
 // ============================================================================
@@ -483,6 +490,7 @@ model ChatMessage {
   citations       Citation[]
 
   @@index([sessionId, createdAt])
+  @@map("chat_messages")
 }
 
 // ============================================================================
@@ -554,6 +562,7 @@ model Citation {
   @@index([sessionId, citationType])
   @@index([jurisdiction, statuteCode, section])
   @@index([isVerified, verificationStatus])
+  @@map("citations")
 }
 
 // ============================================================================
@@ -594,6 +603,7 @@ model ExportJob {
   @@index([userId, createdAt])
   @@index([sessionId])
   @@index([status])
+  @@map("export_jobs")
 }
 
 model DocumentTemplate {
@@ -623,6 +633,7 @@ model DocumentTemplate {
 
   @@index([userId, documentType])
   @@index([isPublic, jurisdiction])
+  @@map("document_templates")
 }
 
 model GeneratedDocument {
@@ -653,6 +664,7 @@ model GeneratedDocument {
   @@index([matterId, createdAt])
   @@index([templateId])
   @@index([userId, status])
+  @@map("generated_documents")
 }
 
 // ============================================================================
@@ -767,6 +779,7 @@ model BillableTime {
   @@index([matterId, createdAt])
   @@index([userId, status])
   @@index([invoiceId])
+  @@map("billable_time")
 }
 
 // ============================================================================
@@ -785,6 +798,7 @@ model FeatureFlag {
   updatedAt       DateTime @updatedAt
 
   @@index([isEnabled])
+  @@map("feature_flags")
 }
 
 model SystemLog {
@@ -799,4 +813,5 @@ model SystemLog {
 
   @@index([level, timestamp])
   @@index([service, timestamp])
+  @@map("system_logs")
 }
