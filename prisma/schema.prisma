@@ -188,7 +188,6 @@ model Matter {
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessions        Session[]
   documents       GeneratedDocument[]
-  conflictChecks  ConflictCheck[]
   billableTime    BillableTime[]
 
   @@index([userId, status])
@@ -660,29 +659,43 @@ model GeneratedDocument {
 // ============================================================================
 
 model ConflictCheck {
-  id              String   @id @default(cuid())
-  userId          String   @db.Uuid
+  id                  String    @id @default(cuid())
+  userId              String    @db.Uuid
 
-  partyNames      String[]
-  companyNames    String[]
-  matterId        String?
+  // Check Parameters
+  clientName          String?
+  adverseParties      String[]
+  companyNames        String[]
+  matterDescription   String?   @db.Text
+  excludeMatterId     String?
 
-  conflicts       Json
-  status          String
-  riskLevel       String?
+  // Results
+  conflicts           Json      // Array of ConflictMatch objects
+  riskLevel           String    // none, low, medium, high, critical
+  totalMatches        Int       @default(0)
+  highRiskCount       Int       @default(0)
+  mediumRiskCount     Int       @default(0)
+  lowRiskCount        Int       @default(0)
+  recommendation      String    // proceed, review, decline
+  summary             String    @db.Text
 
-  reviewedBy      String?
-  reviewedAt      DateTime?
-  resolution      String?
-  resolutionNotes String?  @db.Text
+  // Resolution
+  status              String    @default("pending") // pending, waived, declined, screened, cleared
+  resolvedBy          String?
+  resolvedAt          DateTime?
+  resolutionNotes     String?   @db.Text
 
-  createdAt       DateTime @default(now())
+  // Audit
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  matter          Matter?  @relation(fields: [matterId], references: [id], onDelete: SetNull)
+  // Relations
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@map("conflict_checks")
   @@index([userId, createdAt])
   @@index([status, riskLevel])
+  @@index([clientName])
 }
 
 // ============================================================================
@@ -697,29 +710,26 @@ model Backup {
   scope           String
   scopeId         String?
 
-  resources       Json
-
-  storageProvider String
-  backupUrl       String
-  encryptionKey   String
-
-  size            BigInt
+  size            Int
   checksum        String
-  compressionType String?
 
-  retentionUntil  DateTime
-  isEncrypted     Boolean  @default(true)
+  encryptedWith   String?
+  includesAudio   Boolean  @default(false)
+  includesDocuments Boolean @default(true)
+
+  metadata        Json     @default("{}")
 
   status          String   @default("pending")
-  progress        Int      @default(0)
   error           String?  @db.Text
 
   createdAt       DateTime @default(now())
   completedAt     DateTime?
+  lastRestoredAt  DateTime?
+  restoreCount    Int      @default(0)
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
-  @@index([retentionUntil])
+  @@map("backups")
 }
 
 // ============================================================================

@@ -1,0 +1,101 @@
+# ============================================================================
+# VERCEL ENVIRONMENT VARIABLES - COPY/PASTE READY
+# ============================================================================
+# Instructions:
+# 1. Go to https://vercel.com/dashboard
+# 2. Select your project → Settings → Environment Variables
+# 3. Copy each variable below and paste into Vercel
+# 4. Replace YOUR_*_HERE placeholders with actual values
+# 5. Set scope to: Production, Preview, Development
+# ============================================================================
+
+# ----------- DATABASE (REQUIRED) -----------
+DATABASE_URL
+postgresql://postgres.nmllrewdfkpuhchkeogh:HWvgzEJcyCsNbwl4@aws-0-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
+
+DIRECT_URL
+postgresql://postgres.nmllrewdfkpuhchkeogh:HWvgzEJcyCsNbwl4@aws-0-us-west-1.pooler.supabase.com:5432/postgres
+
+# ----------- SUPABASE (REQUIRED) -----------
+NEXT_PUBLIC_SUPABASE_URL
+https://nmllrewdfkpuhchkeogh.supabase.co
+
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+YOUR_ANON_KEY_HERE
+
+SUPABASE_SERVICE_ROLE_KEY
+YOUR_SERVICE_ROLE_KEY_HERE
+
+NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET
+audio-files
+
+# ----------- ENCRYPTION (REQUIRED) -----------
+ENCRYPTION_MASTER_KEY
+43825f6bea5867cc08b9c4a7dc423d3d7b8d9e9809be81090d01d80fae6e11e5
+
+BACKUP_ENCRYPTION_SECRET
+e029a722786be62df067d60311bb1a6ce745090848c25328f421f19048d9c07b
+
+CRON_SECRET
+f072f487d5693c1701634c0f79c2de99679ac5ccb48dba1f30ca64d0b335fe4c
+
+# ----------- APPLICATION (REQUIRED) -----------
+NODE_ENV
+production
+
+NEXT_PUBLIC_APP_URL
+https://your-app.vercel.app
+
+# ----------- AI SERVICES (OPTIONAL) -----------
+# Uncomment and add keys if you want AI features
+
+# OPENAI_API_KEY
+# sk-...
+
+# ANTHROPIC_API_KEY
+# sk-ant-...
+
+# GOOGLE_API_KEY
+# ...
+
+# OPENROUTER_API_KEY
+# sk-or-...
+
+# ============================================================================
+# WHERE TO FIND MISSING VALUES
+# ============================================================================
+
+# Supabase Keys:
+# 1. Go to https://supabase.com/dashboard
+# 2. Select your project
+# 3. Go to Settings → API
+# 4. Copy:
+#    - Project URL → NEXT_PUBLIC_SUPABASE_URL
+#    - anon/public key → NEXT_PUBLIC_SUPABASE_ANON_KEY
+#    - service_role key → SUPABASE_SERVICE_ROLE_KEY
+
+# AI API Keys:
+# - OpenAI: https://platform.openai.com/api-keys
+# - Anthropic: https://console.anthropic.com/
+# - Google: https://makersuite.google.com/app/apikey
+# - OpenRouter: https://openrouter.ai/keys
+
+# App URL:
+# - After first deployment, Vercel will give you a URL like:
+#   https://your-app-abc123.vercel.app
+# - Copy this to NEXT_PUBLIC_APP_URL
+
+# ============================================================================
+# VERIFICATION CHECKLIST
+# ============================================================================
+# After adding all variables:
+# [ ] All REQUIRED variables are set
+# [ ] Supabase keys match your project
+# [ ] NEXT_PUBLIC_APP_URL is updated after first deploy
+# [ ] Scope is set to: Production, Preview, Development
+# [ ] Secrets are marked as "Sensitive" (hidden in logs)
+# [ ] Test deployment succeeds
+# [ ] Visit app URL and verify it works
+# [ ] Check cron job appears in Settings → Cron Jobs
+
+# ============================================================================

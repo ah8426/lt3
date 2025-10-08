@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCreateMatter } from '@/hooks/useMatters';
+import { useConflicts } from '@/hooks/useConflicts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,14 +15,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Briefcase, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Briefcase, ArrowLeft, Loader2, AlertCircle, Shield } from 'lucide-react';
 import Link from 'next/link';
 import type { CreateMatterInput } from '@/types/matter';
 import { JURISDICTIONS, COURT_TYPES } from '@/types/matter';
+import { ConflictReport } from '@/components/conflicts/ConflictReport';
+import { ConflictCheckResult } from '@/lib/conflicts/conflict-checker';
 
 export default function NewMatterPage() {
   const router = useRouter();
   const createMatter = useCreateMatter();
+  const { runConflictCheck } = useConflicts();
 
   const [formData, setFormData] = useState<CreateMatterInput>({
     name: '',
@@ -33,6 +45,10 @@ export default function NewMatterPage() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [conflictResult, setConflictResult] = useState<ConflictCheckResult | null>(null);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
+  const [pendingMatterData, setPendingMatterData] = useState<CreateMatterInput | null>(null);
 
   const handleInputChange = (field: keyof CreateMatterInput, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -68,16 +84,46 @@ export default function NewMatterPage() {
       return;
     }
 
-    try {
-      const data: CreateMatterInput = {
-        name: formData.name.trim(),
-        clientName: formData.clientName.trim(),
-        adverseParty: formData.adverseParty?.trim() || null,
-        jurisdiction: formData.jurisdiction || null,
-        courtType: formData.courtType || null,
-        caseNumber: formData.caseNumber?.trim() || null,
-      };
+    const data: CreateMatterInput = {
+      name: formData.name.trim(),
+      clientName: formData.clientName.trim(),
+      adverseParty: formData.adverseParty?.trim() || null,
+      jurisdiction: formData.jurisdiction || null,
+      courtType: formData.courtType || null,
+      caseNumber: formData.caseNumber?.trim() || null,
+    };
 
+    // Run conflict check before creating matter
+    setIsCheckingConflicts(true);
+    try {
+      const result = await runConflictCheck({
+        clientName: data.clientName,
+        adverseParties: data.adverseParty ? [data.adverseParty] : [],
+        matterDescription: data.name,
+        saveResult: true,
+      });
+
+      setConflictResult(result);
+      setPendingMatterData(data);
+
+      // Block creation if HIGH or CRITICAL conflicts found
+      if (result.riskLevel === 'high' || result.riskLevel === 'critical') {
+        setShowConflictDialog(true);
+        setIsCheckingConflicts(false);
+        return;
+      }
+
+      // Auto-proceed for LOW, MEDIUM, or NONE
+      await createMatterAfterConflictCheck(data);
+    } catch (error) {
+      console.error('Error checking conflicts:', error);
+      // Continue with matter creation even if conflict check fails
+      await createMatterAfterConflictCheck(data);
+    }
+  };
+
+  const createMatterAfterConflictCheck = async (data: CreateMatterInput) => {
+    try {
       const result = await createMatter.mutateAsync(data);
       router.push(`/matters/${result.matter.id}`);
     } catch (error) {
@@ -85,6 +131,23 @@ export default function NewMatterPage() {
       setErrors({
         submit: 'Failed to create matter. Please try again.',
       });
+    } finally {
+      setIsCheckingConflicts(false);
+    }
+  };
+
+  const handleConflictDecision = async (decision: 'proceed' | 'cancel') => {
+    if (decision === 'cancel') {
+      setShowConflictDialog(false);
+      setPendingMatterData(null);
+      setConflictResult(null);
+      return;
+    }
+
+    // User chose to proceed despite conflicts
+    if (pendingMatterData) {
+      setShowConflictDialog(false);
+      await createMatterAfterConflictCheck(pendingMatterData);
     }
   };
 
@@ -274,9 +337,14 @@ export default function NewMatterPage() {
               <Button
                 type="submit"
                 className="bg-[#00BFA5] hover:bg-[#00BFA5]/90"
-                disabled={createMatter.isPending}
+                disabled={createMatter.isPending || isCheckingConflicts}
               >
-                {createMatter.isPending ? (
+                {isCheckingConflicts ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Checking Conflicts...
+                  </>
+                ) : createMatter.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Creating...
@@ -297,20 +365,57 @@ export default function NewMatterPage() {
       <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
         <CardContent className="pt-6">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+            <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div>
               <h4 className="text-sm font-medium text-blue-900 dark:text-blue-200">
-                About Conflict Checking
+                Automatic Conflict Checking
               </h4>
               <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                When you add an adverse party, the system will automatically perform a
-                conflict check against all existing matters to ensure there are no
-                conflicts of interest.
+                The system automatically performs a comprehensive conflict check when you create a matter.
+                This includes checking the client name, adverse parties, and matter description against
+                all existing matters. High-risk conflicts will require manual review before proceeding.
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Conflict Dialog */}
+      <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+              Conflicts of Interest Detected
+            </DialogTitle>
+            <DialogDescription>
+              The system has detected potential conflicts of interest. Please review the conflicts
+              below and decide how to proceed.
+            </DialogDescription>
+          </DialogHeader>
+
+          {conflictResult && (
+            <div className="py-4">
+              <ConflictReport result={conflictResult} />
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => handleConflictDecision('cancel')}
+            >
+              Cancel Matter Creation
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleConflictDecision('proceed')}
+            >
+              Proceed Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
