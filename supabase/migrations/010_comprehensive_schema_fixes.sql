@@ -116,22 +116,22 @@ CREATE INDEX IF NOT EXISTS idx_sessions_share_token
   ON public.sessions(share_token) WHERE share_token IS NOT NULL;
 
 -- ============================================================================
--- PART 2: FIX TRANSCRIPT_SEGMENTS TABLE (already renamed to transcript_segments)
+-- PART 2: FIX TRANSCRIPTION_SEGMENTS TABLE
 -- ============================================================================
 
 -- Rename time columns if they exist
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transcript_segments' AND column_name='start_time') THEN
-    ALTER TABLE public.transcript_segments RENAME COLUMN start_time TO start_ms;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transcription_segments' AND column_name='start_time') THEN
+    ALTER TABLE public.transcription_segments RENAME COLUMN start_time TO start_ms;
   END IF;
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transcript_segments' AND column_name='end_time') THEN
-    ALTER TABLE public.transcript_segments RENAME COLUMN end_time TO end_ms;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transcription_segments' AND column_name='end_time') THEN
+    ALTER TABLE public.transcription_segments RENAME COLUMN end_time TO end_ms;
   END IF;
 END $$;
 
 -- Add missing columns
-ALTER TABLE public.transcript_segments
+ALTER TABLE public.transcription_segments
   ADD COLUMN IF NOT EXISTS speaker_name TEXT,
   ADD COLUMN IF NOT EXISTS provider TEXT,
   ADD COLUMN IF NOT EXISTS is_edited BOOLEAN DEFAULT false,
@@ -141,18 +141,18 @@ ALTER TABLE public.transcript_segments
 -- The old INTEGER speaker column should be migrated to speaker_number
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transcript_segments' AND column_name='speaker' AND data_type='integer') THEN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='transcription_segments' AND column_name='speaker' AND data_type='integer') THEN
     -- Rename the integer speaker column to speaker_legacy
-    ALTER TABLE public.transcript_segments RENAME COLUMN speaker TO speaker_legacy;
+    ALTER TABLE public.transcription_segments RENAME COLUMN speaker TO speaker_legacy;
   END IF;
 END $$;
 
 -- Remove updated_at column (Prisma doesn't have it)
-ALTER TABLE public.transcript_segments DROP COLUMN IF EXISTS updated_at;
+ALTER TABLE public.transcription_segments DROP COLUMN IF EXISTS updated_at;
 
 -- Update indexes
-CREATE INDEX IF NOT EXISTS idx_transcript_segments_session_start
-  ON public.transcript_segments(session_id, start_ms);
+CREATE INDEX IF NOT EXISTS idx_transcription_segments_session_start
+  ON public.transcription_segments(session_id, start_ms);
 
 -- ============================================================================
 -- PART 3: DROP ORPHANED SEGMENT_EDIT_HISTORY TABLE
@@ -701,7 +701,7 @@ BEGIN
   SELECT array_agg(table_name)
   INTO missing_tables
   FROM (VALUES
-    ('sessions'), ('transcript_segments'), ('matters'), ('profiles'),
+    ('sessions'), ('transcription_segments'), ('matters'), ('profiles'),
     ('encrypted_api_keys'), ('subscription_plans'), ('invoices'),
     ('usage_metrics'), ('transcript_access_logs'), ('chat_messages'),
     ('citations'), ('export_jobs'), ('document_templates'),
