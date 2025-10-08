@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const BUCKET_NAME = 'audio-recordings';
+const BUCKET_NAME = 'audio-files';
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 const ALLOWED_MIME_TYPES = ['audio/webm', 'audio/wav', 'audio/mp3', 'audio/mpeg'];
 

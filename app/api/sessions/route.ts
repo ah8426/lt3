@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         const buffer = Buffer.from(await audioFile.arrayBuffer());
 
         const { error: uploadError } = await supabase.storage
-          .from('audio-recordings')
+          .from('audio-files')
           .upload(fileName, buffer, {
             contentType: 'audio/webm',
             upsert: true,
