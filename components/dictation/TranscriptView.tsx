@@ -5,10 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Edit2, Check, X, User, Clock, Filter, BarChart3 } from 'lucide-react';
+import { Search, Edit2, Check, X, User, Clock, Filter, BarChart3, Shield, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { SpeakerLabel } from '@/components/speakers/SpeakerLabel';
 import { useSpeakers, Speaker } from '@/hooks/useSpeakers';
+import { useRedaction } from '@/hooks/useRedaction';
+import { RedactionEditor } from '@/components/redaction/RedactionEditor';
+import { RedactionHighlight } from '@/components/redaction/RedactionHighlight';
+import { PIIType } from '@/lib/redaction/pii-detector';
 import {
   Select,
   SelectContent,
@@ -16,6 +20,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export interface TranscriptionSegment {
   text: string;
@@ -49,6 +66,13 @@ export function TranscriptView({
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const [selectedSpeaker, setSelectedSpeaker] = useState<string>('all');
   const [showTimeline, setShowTimeline] = useState(false);
+  const [showRedactionEditor, setShowRedactionEditor] = useState(false);
+  const [selectedTextForRedaction, setSelectedTextForRedaction] = useState<{
+    text: string;
+    start: number;
+    end: number;
+  } | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const latestSegmentRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +81,15 @@ export function TranscriptView({
     sessionId,
     includeStats: true,
   });
+
+  // Fetch redactions
+  const {
+    redactions,
+    isLoading: redactionsLoading,
+    createRedaction,
+    unredact,
+    detectPII,
+  } = useRedaction({ sessionId });
 
   // Auto-scroll to latest segment
   useEffect(() => {
@@ -200,19 +233,132 @@ export function TranscriptView({
   }, [segments]);
 
   /**
-   * Export transcript
+   * Handle text selection for redaction
    */
-  const handleExportText = () => {
+  const handleTextSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.toString().trim().length === 0) {
+      setSelectedTextForRedaction(null);
+      return;
+    }
+
+    const selectedText = selection.toString();
+    // In a real implementation, you'd calculate the actual offset in the full transcript
+    // For now, we'll use a simplified approach
+    setSelectedTextForRedaction({
+      text: selectedText,
+      start: 0, // Would calculate actual position
+      end: selectedText.length,
+    });
+  };
+
+  /**
+   * Handle redaction from context menu
+   */
+  const handleRedactSelection = () => {
+    if (selectedTextForRedaction) {
+      setShowRedactionEditor(true);
+    }
+  };
+
+  /**
+   * Handle saving redaction
+   */
+  const handleSaveRedaction = async (params: {
+    originalText: string;
+    redactedText: string;
+    piiType: PIIType;
+    startOffset: number;
+    endOffset: number;
+    reason?: string;
+    legalBasis?: string;
+    accessControl?: string[];
+  }) => {
+    await createRedaction(params);
+    setSelectedTextForRedaction(null);
+  };
+
+  /**
+   * Apply redactions to text
+   */
+  const applyRedactionsToText = (text: string, segmentIndex: number): React.ReactNode => {
+    // Find redactions for this segment
+    const segmentRedactions = redactions.filter(
+      (r) => r.segmentId === segments[segmentIndex]?.text // Simplified - would use actual segment ID
+    );
+
+    if (segmentRedactions.length === 0) {
+      return text;
+    }
+
+    // Sort redactions by start offset
+    const sorted = [...segmentRedactions].sort((a, b) => a.startOffset - b.startOffset);
+
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    sorted.forEach((redaction, idx) => {
+      // Add text before redaction
+      if (redaction.startOffset > lastIndex) {
+        parts.push(
+          <span key={`text-${idx}`}>{text.substring(lastIndex, redaction.startOffset)}</span>
+        );
+      }
+
+      // Add redaction highlight
+      parts.push(
+        <RedactionHighlight
+          key={`redaction-${redaction.id}`}
+          redaction={redaction}
+          canUnredact={true}
+          onUnredact={unredact}
+          variant="inline"
+        />
+      );
+
+      lastIndex = redaction.endOffset;
+    });
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(<span key="text-end">{text.substring(lastIndex)}</span>);
+    }
+
+    return <>{parts}</>;
+  };
+
+  /**
+   * Export transcript (with option for redacted/unredacted)
+   */
+  const handleExportText = (includeRedactions: boolean = true) => {
     const text = segments
       .filter((s) => s.isFinal)
       .map((s) => {
+        let segmentText = s.text;
+
+        // Apply redactions if requested
+        if (includeRedactions) {
+          const segmentRedactions = redactions.filter(
+            (r) => r.segmentId === s.text // Simplified
+          );
+
+          // Apply redactions from end to beginning to preserve offsets
+          const sorted = [...segmentRedactions].sort((a, b) => b.startOffset - a.startOffset);
+          sorted.forEach((r) => {
+            segmentText =
+              segmentText.substring(0, r.startOffset) +
+              r.redactedText +
+              segmentText.substring(r.endOffset);
+          });
+        }
+
         if (s.speaker !== undefined) {
           const speaker = getSpeakerByNumber(s.speaker);
           const speakerName = speaker?.name || `Speaker ${s.speaker + 1}`;
           const role = speaker?.role ? ` (${speaker.role})` : '';
-          return `${speakerName}${role}: ${s.text}`;
+          return `${speakerName}${role}: ${segmentText}`;
         }
-        return s.text;
+        return segmentText;
       })
       .join('\n\n');
 
@@ -220,7 +366,7 @@ export function TranscriptView({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `transcript-${sessionId}.txt`;
+    a.download = `transcript-${sessionId}${includeRedactions ? '-redacted' : ''}.txt`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -495,15 +641,54 @@ export function TranscriptView({
                     </div>
                   </div>
                 ) : (
-                  <p
-                    className={`text-base leading-relaxed ${
-                      segment.isFinal
-                        ? 'text-gray-900 dark:text-white'
-                        : 'text-gray-600 dark:text-gray-400 italic'
-                    }`}
-                  >
-                    {segment.text}
-                  </p>
+                  <ContextMenu>
+                    <ContextMenuTrigger asChild>
+                      <p
+                        className={`text-base leading-relaxed cursor-text select-text ${
+                          segment.isFinal
+                            ? 'text-gray-900 dark:text-white'
+                            : 'text-gray-600 dark:text-gray-400 italic'
+                        }`}
+                        onMouseUp={handleTextSelection}
+                      >
+                        {applyRedactionsToText(segment.text, index)}
+                      </p>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => handleStartEdit(index, segment.text)}>
+                        <Edit2 className="h-4 w-4 mr-2" />
+                        Edit Text
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem
+                        onClick={handleRedactSelection}
+                        disabled={!selectedTextForRedaction}
+                      >
+                        <Lock className="h-4 w-4 mr-2" />
+                        Redact Selected Text
+                      </ContextMenuItem>
+                      <ContextMenuItem
+                        onClick={async () => {
+                          const matches = await detectPII({
+                            text: segment.text,
+                            options: { minConfidence: 0.75 },
+                          });
+                          if (matches.length > 0) {
+                            // Show first match in redaction editor
+                            setSelectedTextForRedaction({
+                              text: matches[0].text,
+                              start: matches[0].start,
+                              end: matches[0].end,
+                            });
+                            setShowRedactionEditor(true);
+                          }
+                        }}
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Auto-Detect PII
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 )}
               </div>
             );
@@ -528,13 +713,51 @@ export function TranscriptView({
 
       {/* Footer Actions */}
       <div className="mt-4 pt-4 border-t dark:border-gray-700 flex items-center justify-between">
-        <div className="text-sm text-gray-500">
-          {segments.filter((s) => s.isFinal).length} segments
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">
+            {segments.filter((s) => s.isFinal).length} segments
+          </span>
+          {redactions.length > 0 && (
+            <Badge variant="outline" className="flex items-center gap-1">
+              <Lock className="h-3 w-3" />
+              {redactions.length} redaction{redactions.length !== 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
-        <Button variant="outline" size="sm" onClick={handleExportText}>
-          Export as Text
-        </Button>
+
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Export as Text
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportText(true)}>
+                <Lock className="h-4 w-4 mr-2" />
+                Export with Redactions
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportText(false)}>
+                <Shield className="h-4 w-4 mr-2" />
+                Export Original (Unredacted)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
+
+      {/* Redaction Editor */}
+      <RedactionEditor
+        isOpen={showRedactionEditor}
+        onClose={() => {
+          setShowRedactionEditor(false);
+          setSelectedTextForRedaction(null);
+        }}
+        onSave={handleSaveRedaction}
+        selectedText={selectedTextForRedaction?.text}
+        startOffset={selectedTextForRedaction?.start || 0}
+        endOffset={selectedTextForRedaction?.end || 0}
+      />
     </div>
   );
 }
