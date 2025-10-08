@@ -14,6 +14,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { SegmentEditHistory } from './SegmentEditHistory'
+import { SpeakerLabel } from '@/components/speakers/SpeakerLabel'
+import { useSpeakers } from '@/hooks/useSpeakers'
 import {
   Edit2,
   Save,
@@ -29,6 +31,7 @@ import { formatDuration } from '@/lib/utils/format'
 
 interface TranscriptSegmentEditorProps {
   segment: Segment
+  sessionId: string
   onUpdate: (segmentId: string, text: string, originalText: string) => Promise<void>
   onDelete?: (segmentId: string) => Promise<void>
   isUpdating?: boolean
@@ -36,6 +39,7 @@ interface TranscriptSegmentEditorProps {
 
 export function TranscriptSegmentEditor({
   segment,
+  sessionId,
   onUpdate,
   onDelete,
   isUpdating = false,
@@ -43,6 +47,9 @@ export function TranscriptSegmentEditor({
   const [isEditing, setIsEditing] = useState(false)
   const [editedText, setEditedText] = useState(segment.text)
   const [showHistory, setShowHistory] = useState(false)
+
+  // Fetch speakers for speaker labels
+  const { getSpeakerByNumber } = useSpeakers({ sessionId })
 
   const handleStartEdit = () => {
     setEditedText(segment.text)
@@ -103,17 +110,42 @@ export function TranscriptSegmentEditor({
     return colors[speaker % colors.length]
   }
 
+  // Get speaker border color for highlighting
+  const getSpeakerBorderColor = (speakerNumber?: number): string => {
+    if (speakerNumber === undefined || speakerNumber === null) return '';
+
+    const speaker = getSpeakerByNumber(speakerNumber);
+    if (speaker?.color) {
+      return `border-l-4`;
+    }
+
+    return 'border-l-4';
+  }
+
+  const speaker = segment.speaker !== undefined && segment.speaker !== null
+    ? getSpeakerByNumber(segment.speaker)
+    : undefined
+
   return (
-    <div className="group p-4 rounded-lg border hover:border-primary transition-colors dark:border-gray-700">
+    <div
+      className={`group p-4 rounded-lg border hover:border-primary transition-colors dark:border-gray-700 ${getSpeakerBorderColor(segment.speaker)}`}
+      style={
+        speaker?.color
+          ? { borderLeftColor: speaker.color }
+          : undefined
+      }
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex flex-wrap items-center gap-2">
           {/* Speaker */}
           {segment.speaker !== undefined && segment.speaker !== null && (
-            <Badge variant="outline" className={`${getSpeakerColor(segment.speaker)} border-0`}>
-              <User className="h-3 w-3 mr-1" />
-              Speaker {segment.speaker}
-            </Badge>
+            <SpeakerLabel
+              speaker={speaker}
+              speakerNumber={segment.speaker}
+              variant="badge"
+              size="sm"
+            />
           )}
 
           {/* Timestamp */}

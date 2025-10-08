@@ -17,7 +17,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Info,
-  Save
+  Save,
+  Users
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -37,6 +38,14 @@ interface TranscriptPreferences {
   saveBeforeExport: boolean
   saveBeforeShare: boolean
   trackSegmentEdits: boolean
+
+  // Speaker Diarization
+  enableSpeakerDiarization: boolean
+  autoDetectSpeakers: boolean
+  maxSpeakers: number
+  requireSpeakerNames: boolean
+  showSpeakerTimeline: boolean
+  colorCodeSpeakers: boolean
 }
 
 const DEFAULT_PREFERENCES: TranscriptPreferences = {
@@ -52,6 +61,12 @@ const DEFAULT_PREFERENCES: TranscriptPreferences = {
   saveBeforeExport: true,
   saveBeforeShare: true,
   trackSegmentEdits: true,
+  enableSpeakerDiarization: true,
+  autoDetectSpeakers: true,
+  maxSpeakers: 10,
+  requireSpeakerNames: false,
+  showSpeakerTimeline: true,
+  colorCodeSpeakers: true,
 }
 
 export function TranscriptSettings() {
@@ -357,6 +372,129 @@ export function TranscriptSettings() {
               <Info className="h-4 w-4" />
               <AlertDescription>
                 Version control is disabled. You won't be able to restore previous versions or track changes.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Speaker Diarization Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <CardTitle>Speaker Diarization</CardTitle>
+          </div>
+          <CardDescription>
+            Automatically detect and label different speakers in your transcripts
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Enable Speaker Diarization */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="enable-speakers">Enable Speaker Diarization</Label>
+              <p className="text-sm text-muted-foreground">
+                Detect and label different speakers in audio recordings
+              </p>
+            </div>
+            <Switch
+              id="enable-speakers"
+              checked={preferences.enableSpeakerDiarization}
+              onCheckedChange={(checked) => handleChange('enableSpeakerDiarization', checked)}
+            />
+          </div>
+
+          {preferences.enableSpeakerDiarization && (
+            <>
+              <Separator />
+
+              {/* Auto-detect Speakers */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="auto-detect">Auto-detect Speakers</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically identify speakers from transcription data
+                  </p>
+                </div>
+                <Switch
+                  id="auto-detect"
+                  checked={preferences.autoDetectSpeakers}
+                  onCheckedChange={(checked) => handleChange('autoDetectSpeakers', checked)}
+                />
+              </div>
+
+              {/* Max Speakers */}
+              <div className="space-y-2">
+                <Label htmlFor="max-speakers">Maximum Speakers</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="max-speakers"
+                    type="number"
+                    min={2}
+                    max={20}
+                    value={preferences.maxSpeakers}
+                    onChange={(e) => handleChange('maxSpeakers', parseInt(e.target.value) || 10)}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Maximum number of speakers to detect (2-20)
+                  </span>
+                </div>
+              </div>
+
+              {/* Show Speaker Timeline */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="show-timeline">Show Speaker Timeline</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Display visual timeline showing when each speaker spoke
+                  </p>
+                </div>
+                <Switch
+                  id="show-timeline"
+                  checked={preferences.showSpeakerTimeline}
+                  onCheckedChange={(checked) => handleChange('showSpeakerTimeline', checked)}
+                />
+              </div>
+
+              {/* Color-code Speakers */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="color-code">Color-code Speakers</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Use distinct colors for each speaker in the transcript
+                  </p>
+                </div>
+                <Switch
+                  id="color-code"
+                  checked={preferences.colorCodeSpeakers}
+                  onCheckedChange={(checked) => handleChange('colorCodeSpeakers', checked)}
+                />
+              </div>
+
+              {/* Require Speaker Names */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="require-names">Require Speaker Names</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Require speakers to be named before export
+                  </p>
+                </div>
+                <Switch
+                  id="require-names"
+                  checked={preferences.requireSpeakerNames}
+                  onCheckedChange={(checked) => handleChange('requireSpeakerNames', checked)}
+                />
+              </div>
+            </>
+          )}
+
+          {!preferences.enableSpeakerDiarization && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Speaker diarization is disabled. All transcribed text will be unlabeled.
               </AlertDescription>
             </Alert>
           )}

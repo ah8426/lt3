@@ -5,8 +5,17 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, Edit2, Check, X, User, Clock } from 'lucide-react';
+import { Search, Edit2, Check, X, User, Clock, Filter, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
+import { SpeakerLabel } from '@/components/speakers/SpeakerLabel';
+import { useSpeakers, Speaker } from '@/hooks/useSpeakers';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export interface TranscriptionSegment {
   text: string;
@@ -38,8 +47,16 @@ export function TranscriptView({
   const [searchQuery, setSearchQuery] = useState('');
   const [editingSegment, setEditingSegment] = useState<EditingSegment | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
+  const [selectedSpeaker, setSelectedSpeaker] = useState<string>('all');
+  const [showTimeline, setShowTimeline] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const latestSegmentRef = useRef<HTMLDivElement>(null);
+
+  // Fetch speakers
+  const { speakers, stats, isLoading: speakersLoading } = useSpeakers({
+    sessionId,
+    includeStats: true,
+  });
 
   // Auto-scroll to latest segment
   useEffect(() => {
@@ -51,17 +68,46 @@ export function TranscriptView({
     }
   }, [segments.length, isTranscribing]);
 
-  // Filter segments based on search
+  // Get speaker by number
+  const getSpeakerByNumber = (speakerNumber?: number): Speaker | undefined => {
+    if (speakerNumber === undefined) return undefined;
+    return speakers.find((s) => s.speakerNumber === speakerNumber);
+  };
+
+  // Filter segments based on search and speaker
   const filteredSegments = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return segments;
+    let filtered = segments.map((segment, index) => ({ segment, index }));
+
+    // Filter by speaker
+    if (selectedSpeaker !== 'all') {
+      const speakerNum = parseInt(selectedSpeaker);
+      filtered = filtered.filter(({ segment }) => segment.speaker === speakerNum);
     }
 
-    const query = searchQuery.toLowerCase();
-    return segments
-      .map((segment, index) => ({ segment, index }))
-      .filter(({ segment }) => segment.text.toLowerCase().includes(query));
-  }, [segments, searchQuery]);
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(({ segment }) =>
+        segment.text.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
+  }, [segments, searchQuery, selectedSpeaker]);
+
+  // Calculate speaker timeline data
+  const timelineData = useMemo(() => {
+    if (!showTimeline || segments.length === 0) return [];
+
+    const totalDuration = Math.max(...segments.map((s) => s.endTime));
+
+    return segments.map((segment, index) => ({
+      index,
+      speaker: segment.speaker,
+      startPercent: (segment.startTime / totalDuration) * 100,
+      widthPercent: ((segment.endTime - segment.startTime) / totalDuration) * 100,
+    }));
+  }, [segments, showTimeline]);
 
   /**
    * Start editing a segment
@@ -121,21 +167,37 @@ export function TranscriptView({
   };
 
   /**
-   * Get speaker color
+   * Get speaker border color for highlighting
    */
-  const getSpeakerColor = (speaker?: number): string => {
-    if (speaker === undefined) return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
+  const getSpeakerBorderColor = (speakerNumber?: number): string => {
+    if (speakerNumber === undefined) return '';
+
+    const speaker = getSpeakerByNumber(speakerNumber);
+    if (speaker?.color) {
+      return `border-l-4 border-l-[${speaker.color}]`;
+    }
 
     const colors = [
-      'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-      'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-      'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
+      'border-l-4 border-l-blue-500',
+      'border-l-4 border-l-green-500',
+      'border-l-4 border-l-purple-500',
+      'border-l-4 border-l-orange-500',
+      'border-l-4 border-l-pink-500',
     ];
 
-    return colors[speaker % colors.length];
+    return colors[speakerNumber % colors.length];
   };
+
+  /**
+   * Get unique speakers in transcript
+   */
+  const uniqueSpeakers = useMemo(() => {
+    const speakerSet = new Set<number>();
+    segments.forEach((seg) => {
+      if (seg.speaker !== undefined) speakerSet.add(seg.speaker);
+    });
+    return Array.from(speakerSet).sort((a, b) => a - b);
+  }, [segments]);
 
   /**
    * Export transcript
@@ -144,8 +206,13 @@ export function TranscriptView({
     const text = segments
       .filter((s) => s.isFinal)
       .map((s) => {
-        const speaker = s.speaker !== undefined ? `Speaker ${s.speaker}: ` : '';
-        return `${speaker}${s.text}`;
+        if (s.speaker !== undefined) {
+          const speaker = getSpeakerByNumber(s.speaker);
+          const speakerName = speaker?.name || `Speaker ${s.speaker + 1}`;
+          const role = speaker?.role ? ` (${speaker.role})` : '';
+          return `${speakerName}${role}: ${s.text}`;
+        }
+        return s.text;
       })
       .join('\n\n');
 
@@ -179,20 +246,58 @@ export function TranscriptView({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Search Bar */}
+      {/* Search and Filter Bar */}
       <div className="mb-4 space-y-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Search transcript..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex gap-2">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Search transcript..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Speaker Filter */}
+          {uniqueSpeakers.length > 0 && (
+            <Select value={selectedSpeaker} onValueChange={setSelectedSpeaker}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="All Speakers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Speakers</SelectItem>
+                {uniqueSpeakers.map((speakerNum) => {
+                  const speaker = getSpeakerByNumber(speakerNum);
+                  const displayName = speaker?.name || `Speaker ${speakerNum + 1}`;
+                  return (
+                    <SelectItem key={speakerNum} value={speakerNum.toString()}>
+                      {displayName}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Timeline Toggle */}
+          {uniqueSpeakers.length > 0 && (
+            <Button
+              variant={showTimeline ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setShowTimeline(!showTimeline)}
+              title="Toggle speaker timeline"
+            >
+              <BarChart3 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
 
-        {searchQuery && (
+        {/* Filter status */}
+        {(searchQuery || selectedSpeaker !== 'all') && (
           <div className="flex items-center justify-between text-sm text-gray-500">
             <span>
               {filteredSegments.length} result{filteredSegments.length !== 1 ? 's' : ''}
@@ -200,14 +305,76 @@ export function TranscriptView({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedSpeaker('all');
+              }}
               className="h-auto py-1"
             >
-              Clear
+              Clear Filters
             </Button>
           </div>
         )}
       </div>
+
+      {/* Speaker Timeline */}
+      {showTimeline && timelineData.length > 0 && (
+        <div className="mb-4 p-4 border rounded-lg dark:border-gray-700">
+          <h4 className="text-sm font-medium mb-3">Speaker Timeline</h4>
+          <div className="relative h-12 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+            {timelineData.map(({ index, speaker, startPercent, widthPercent }) => {
+              const speakerData = getSpeakerByNumber(speaker);
+              const color = speakerData?.color || '#3B82F6';
+              const displayName = speakerData?.name || (speaker !== undefined ? `Speaker ${speaker + 1}` : 'Unknown');
+
+              return (
+                <div
+                  key={index}
+                  className="absolute h-full cursor-pointer hover:opacity-80 transition-opacity"
+                  style={{
+                    left: `${startPercent}%`,
+                    width: `${widthPercent}%`,
+                    backgroundColor: color,
+                  }}
+                  title={displayName}
+                  onClick={() => {
+                    setHighlightedIndex(index);
+                    // Scroll to segment
+                    const element = document.querySelector(`[data-segment-index="${index}"]`);
+                    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                />
+              );
+            })}
+          </div>
+          {/* Timeline legend */}
+          <div className="flex flex-wrap gap-3 mt-3">
+            {uniqueSpeakers.map((speakerNum) => {
+              const speaker = getSpeakerByNumber(speakerNum);
+              const color = speaker?.color || '#3B82F6';
+              const displayName = speaker?.name || `Speaker ${speakerNum + 1}`;
+              const stat = stats?.find((s) => s.speakerNumber === speakerNum);
+
+              return (
+                <div key={speakerNum} className="flex items-center gap-2 text-xs">
+                  <div
+                    className="w-3 h-3 rounded"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {displayName}
+                  </span>
+                  {stat && (
+                    <span className="text-gray-500">
+                      ({stat.totalSegments} segments)
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Transcript */}
       <ScrollArea ref={scrollAreaRef} className="flex-1">
@@ -221,7 +388,10 @@ export function TranscriptView({
               <div
                 key={index}
                 ref={isLatest ? latestSegmentRef : undefined}
+                data-segment-index={index}
                 className={`group relative p-4 rounded-lg border transition-colors ${
+                  getSpeakerBorderColor(segment.speaker)
+                } ${
                   isHighlighted
                     ? 'border-[#00BFA5] bg-teal-50 dark:bg-teal-900/20'
                     : segment.isFinal
@@ -234,15 +404,18 @@ export function TranscriptView({
                 {/* Header */}
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    {/* Speaker Badge */}
+                    {/* Speaker Label */}
                     {segment.speaker !== undefined && (
-                      <Badge
-                        variant="outline"
-                        className={`${getSpeakerColor(segment.speaker)} border-0`}
-                      >
-                        <User className="h-3 w-3 mr-1" />
-                        Speaker {segment.speaker}
-                      </Badge>
+                      <SpeakerLabel
+                        speaker={getSpeakerByNumber(segment.speaker)}
+                        speakerNumber={segment.speaker}
+                        variant="badge"
+                        size="sm"
+                        onClick={() => {
+                          // Filter by this speaker
+                          setSelectedSpeaker(segment.speaker!.toString());
+                        }}
+                      />
                     )}
 
                     {/* Timestamp */}

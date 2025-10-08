@@ -47,6 +47,16 @@ export enum AuditAction {
   TIMESTAMP_CREATE = 'timestamp_create',
   TIMESTAMP_VERIFY = 'timestamp_verify',
   TIMESTAMP_EXPORT = 'timestamp_export',
+
+  // Speaker operations
+  SPEAKER_CREATE = 'speaker_create',
+  SPEAKER_UPDATE = 'speaker_update',
+  SPEAKER_DELETE = 'speaker_delete',
+  SPEAKER_MERGE = 'speaker_merge',
+
+  // View operations
+  TRANSCRIPT_VIEW = 'transcript_view',
+  SESSION_VIEW = 'session_view',
 }
 
 export enum AuditResource {
