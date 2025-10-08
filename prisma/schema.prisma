@@ -58,22 +58,23 @@ model User {
 
 model EncryptedApiKey {
   id              String   @id @default(cuid())
-  userId          String
+  userId          String   @map("user_id")
   provider        String   // 'deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'
-  encryptedKey    String   @db.Text // Format: version:nonce:ciphertext
-  maskedKey       String?  // For display: "sk-12••••••3456"
-  isActive        Boolean  @default(true)
-  lastTestedAt    DateTime?
-  testStatus      String?  // 'success', 'failed', 'pending'
-  testError       String?  @db.Text
-  createdAt       DateTime @default(now())
-  lastUsedAt      DateTime?
-  updatedAt       DateTime @updatedAt
+  encryptedKey    String   @map("encrypted_key") @db.Text // Format: version:nonce:ciphertext
+  maskedKey       String?  @map("masked_key") // For display: "sk-12••••••3456"
+  isActive        Boolean  @default(true) @map("is_active")
+  lastTestedAt    DateTime? @map("last_tested_at")
+  testStatus      String?  @map("test_status") // 'success', 'failed', 'pending'
+  testError       String?  @map("test_error") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  lastUsedAt      DateTime? @map("last_used_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
   @@index([userId, isActive])
+  @@map("encrypted_api_keys")
 }
 
 // ============================================================================

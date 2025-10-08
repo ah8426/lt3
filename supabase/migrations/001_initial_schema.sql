@@ -75,8 +75,12 @@ CREATE TABLE IF NOT EXISTS public.encrypted_api_keys (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   provider TEXT NOT NULL CHECK (provider IN ('deepgram', 'assemblyai', 'google-ai', 'anthropic', 'openai', 'openrouter')),
   encrypted_key TEXT NOT NULL,
-  masked_key TEXT NOT NULL,
+  masked_key TEXT,
   is_active BOOLEAN DEFAULT true,
+  last_tested_at TIMESTAMPTZ,
+  test_status TEXT,
+  test_error TEXT,
+  last_used_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, provider)

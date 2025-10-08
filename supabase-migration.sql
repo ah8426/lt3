@@ -6,6 +6,68 @@
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- ============================================================================
+-- ENCRYPTED API KEYS TABLE
+-- ============================================================================
+
+-- Encrypted API keys table (for Prisma compatibility)
+CREATE TABLE IF NOT EXISTS public.encrypted_api_keys (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id UUID NOT NULL,
+  provider TEXT NOT NULL CHECK (provider IN ('deepgram', 'assemblyai', 'google-ai', 'anthropic', 'openai', 'openrouter')),
+  encrypted_key TEXT NOT NULL,
+  masked_key TEXT,
+  is_active BOOLEAN DEFAULT true,
+  last_tested_at TIMESTAMPTZ,
+  test_status TEXT,
+  test_error TEXT,
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, provider)
+);
+
+-- Indexes for encrypted_api_keys
+CREATE INDEX IF NOT EXISTS idx_encrypted_api_keys_user_id ON public.encrypted_api_keys(user_id);
+CREATE INDEX IF NOT EXISTS idx_encrypted_api_keys_provider ON public.encrypted_api_keys(provider);
+CREATE INDEX IF NOT EXISTS idx_encrypted_api_keys_active ON public.encrypted_api_keys(is_active);
+CREATE INDEX IF NOT EXISTS idx_encrypted_api_keys_user_active ON public.encrypted_api_keys(user_id, is_active);
+
+-- Enable RLS on encrypted_api_keys
+ALTER TABLE public.encrypted_api_keys ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own API keys" ON public.encrypted_api_keys;
+DROP POLICY IF EXISTS "Users can create own API keys" ON public.encrypted_api_keys;
+DROP POLICY IF EXISTS "Users can update own API keys" ON public.encrypted_api_keys;
+DROP POLICY IF EXISTS "Users can delete own API keys" ON public.encrypted_api_keys;
+
+-- API keys policies (note: Prisma uses service role, so these are for direct Supabase access)
+CREATE POLICY "Users can view own API keys" ON public.encrypted_api_keys
+  FOR SELECT
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can create own API keys" ON public.encrypted_api_keys
+  FOR INSERT
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can update own API keys" ON public.encrypted_api_keys
+  FOR UPDATE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id)
+  WITH CHECK ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+CREATE POLICY "Users can delete own API keys" ON public.encrypted_api_keys
+  FOR DELETE
+  USING ((SELECT auth.uid()) IS NOT NULL AND (SELECT auth.uid()) = user_id);
+
+-- Comments
+COMMENT ON TABLE public.encrypted_api_keys IS 'Encrypted API keys for third-party services (Deepgram, OpenAI, etc.)';
+COMMENT ON COLUMN public.encrypted_api_keys.encrypted_key IS 'AES-256-GCM encrypted API key (format: version:nonce:ciphertext)';
+
+-- ============================================================================
+-- SESSIONS AND TRANSCRIPTION TABLES
+-- ============================================================================
+
 -- Create sessions table
 CREATE TABLE IF NOT EXISTS public.sessions (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
