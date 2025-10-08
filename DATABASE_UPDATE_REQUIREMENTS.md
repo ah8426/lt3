@@ -13,7 +13,8 @@ The following schema changes have been made in recent commits:
 1. **User ID Type Migration** - Changed all user IDs from String (cuid) to UUID
 2. **Audit Logging System** - Added comprehensive audit trail
 3. **Encrypted API Keys** - Enhanced with test status and usage tracking
-4. **Version Control System** - Added transcript versioning (NEW)
+4. **Version Control System** - Added transcript versioning
+5. **Timestamp Verification** - Added cryptographic timestamp proofs (NEW)
 
 ## 📋 Database Migration Checklist
 
@@ -25,7 +26,8 @@ The following schema changes have been made in recent commits:
 | 2 | `002_ai_usage.sql` | AI usage tracking | ✅ Complete |
 | 3 | `003_add_api_key_fields.sql` | Additional API key fields | ✅ Complete |
 | 4 | `create_audit_logs_table.sql` | Audit logging system | ✅ Complete |
-| 5 | `004_transcript_versions.sql` | Version control system | 🆕 **NEW - Apply this** |
+| 5 | `004_transcript_versions.sql` | Version control system | ✅ Complete |
+| 6 | `005_timestamp_proofs.sql` | Timestamp verification system | 🆕 **NEW - Apply this** |
 
 ## 🔴 Action Required
 
@@ -48,27 +50,30 @@ psql $DATABASE_URL < supabase/migrations/003_add_api_key_fields.sql
 # 4. Audit logging
 psql $DATABASE_URL < supabase/migrations/create_audit_logs_table.sql
 
-# 5. Version control (NEW)
+# 5. Version control
 psql $DATABASE_URL < supabase/migrations/004_transcript_versions.sql
+
+# 6. Timestamp verification (NEW)
+psql $DATABASE_URL < supabase/migrations/005_timestamp_proofs.sql
 ```
 
 ### For Existing Deployments:
 
-If you've already run migrations 1-4, only apply the new one:
+If you've already run migrations 1-5, only apply the new one:
 
 ```bash
-# Apply version control migration
-psql $DATABASE_URL < supabase/migrations/004_transcript_versions.sql
+# Apply timestamp verification migration
+psql $DATABASE_URL < supabase/migrations/005_timestamp_proofs.sql
 ```
 
 ### Using Supabase Dashboard:
 
 1. Go to **SQL Editor** in Supabase Dashboard
-2. Copy contents of `supabase/migrations/004_transcript_versions.sql`
+2. Copy contents of `supabase/migrations/005_timestamp_proofs.sql`
 3. Paste and run the SQL
 4. Verify table was created:
    ```sql
-   SELECT * FROM public.transcript_versions LIMIT 1;
+   SELECT * FROM public.timestamp_proofs LIMIT 1;
    ```
 
 ### Using Prisma:
@@ -96,7 +101,8 @@ npx prisma migrate deploy
 - `transcription_segments` (TranscriptSegment)
 - `segment_edit_history`
 - `audit_logs` (AuditLog) ✅
-- `transcript_versions` (TranscriptVersion) 🆕
+- `transcript_versions` (TranscriptVersion) ✅
+- `timestamp_proofs` (TimestampProof) 🆕
 
 ❌ **Not Yet in Supabase** (Application-only models):
 - `subscription_plan` (SubscriptionPlan)
@@ -253,6 +259,7 @@ If false, run `001_initial_schema.sql` first.
 
 | Date | Migration | Description | Developer |
 |------|-----------|-------------|-----------|
+| 2025-10-08 | 005_timestamp_proofs | Added cryptographic timestamp verification system | System |
 | 2025-10-08 | 004_transcript_versions | Added version control system for transcripts | System |
 | 2025-10-08 | create_audit_logs | Added audit logging with enhanced columns | System |
 | 2025-10-08 | 003_add_api_key_fields | Added test_status, last_used_at to API keys | System |
@@ -307,4 +314,4 @@ If you encounter issues:
 ---
 
 **Last Updated:** October 8, 2025
-**Current Schema Version:** 004 (Version Control System)
+**Current Schema Version:** 005 (Timestamp Verification System)
