@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Create sessions table
 CREATE TABLE IF NOT EXISTS public.sessions (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  user_id TEXT NOT NULL,
+  user_id UUID NOT NULL,
   matter_id TEXT,
   status TEXT DEFAULT 'recording',
   title TEXT,
@@ -60,20 +60,40 @@ DROP POLICY IF EXISTS "Users can delete their own sessions" ON public.sessions;
 
 -- Sessions: Users can only access their own sessions
 CREATE POLICY "Users can view their own sessions"
-  ON public.sessions FOR SELECT
-  USING (auth.uid()::text = user_id);
+  ON public.sessions
+  FOR SELECT
+  USING (
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
+  );
 
 CREATE POLICY "Users can insert their own sessions"
-  ON public.sessions FOR INSERT
-  WITH CHECK (auth.uid()::text = user_id);
+  ON public.sessions
+  FOR INSERT
+  WITH CHECK (
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
+  );
 
 CREATE POLICY "Users can update their own sessions"
-  ON public.sessions FOR UPDATE
-  USING (auth.uid()::text = user_id);
+  ON public.sessions
+  FOR UPDATE
+  USING (
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
+  )
+  WITH CHECK (
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
+  );
 
 CREATE POLICY "Users can delete their own sessions"
-  ON public.sessions FOR DELETE
-  USING (auth.uid()::text = user_id);
+  ON public.sessions
+  FOR DELETE
+  USING (
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
+  );
 
 -- Drop existing segment policies if they exist (for idempotency)
 DROP POLICY IF EXISTS "Users can view segments from their sessions" ON public.transcription_segments;
@@ -83,42 +103,58 @@ DROP POLICY IF EXISTS "Users can delete segments from their sessions" ON public.
 
 -- Transcription segments: Users can access segments from their sessions
 CREATE POLICY "Users can view segments from their sessions"
-  ON public.transcription_segments FOR SELECT
+  ON public.transcription_segments
+  FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM public.sessions
-      WHERE sessions.id = transcription_segments.session_id
-      AND sessions.user_id = auth.uid()::text
+    (SELECT auth.uid()) IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.sessions s
+      WHERE s.id = transcription_segments.session_id
+        AND s.user_id = (SELECT auth.uid())
     )
   );
 
 CREATE POLICY "Users can insert segments to their sessions"
-  ON public.transcription_segments FOR INSERT
+  ON public.transcription_segments
+  FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.sessions
-      WHERE sessions.id = transcription_segments.session_id
-      AND sessions.user_id = auth.uid()::text
+    (SELECT auth.uid()) IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.sessions s
+      WHERE s.id = transcription_segments.session_id
+        AND s.user_id = (SELECT auth.uid())
     )
   );
 
 CREATE POLICY "Users can update segments from their sessions"
-  ON public.transcription_segments FOR UPDATE
+  ON public.transcription_segments
+  FOR UPDATE
   USING (
-    EXISTS (
-      SELECT 1 FROM public.sessions
-      WHERE sessions.id = transcription_segments.session_id
-      AND sessions.user_id = auth.uid()::text
+    (SELECT auth.uid()) IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.sessions s
+      WHERE s.id = transcription_segments.session_id
+        AND s.user_id = (SELECT auth.uid())
+    )
+  )
+  WITH CHECK (
+    (SELECT auth.uid()) IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.sessions s
+      WHERE s.id = transcription_segments.session_id
+        AND s.user_id = (SELECT auth.uid())
     )
   );
 
 CREATE POLICY "Users can delete segments from their sessions"
-  ON public.transcription_segments FOR DELETE
+  ON public.transcription_segments
+  FOR DELETE
   USING (
-    EXISTS (
-      SELECT 1 FROM public.sessions
-      WHERE sessions.id = transcription_segments.session_id
-      AND sessions.user_id = auth.uid()::text
+    (SELECT auth.uid()) IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM public.sessions s
+      WHERE s.id = transcription_segments.session_id
+        AND s.user_id = (SELECT auth.uid())
     )
   );
 
@@ -130,31 +166,39 @@ DROP POLICY IF EXISTS "Users can delete their own audio files" ON storage.object
 
 -- Storage policies for audio recordings
 CREATE POLICY "Users can upload their own audio files"
-  ON storage.objects FOR INSERT
+  ON storage.objects
+  FOR INSERT
   WITH CHECK (
-    bucket_id = 'audio-recordings' AND
-    auth.uid()::text = (storage.foldername(name))[1]
+    bucket_id = 'audio-recordings'
+    AND (SELECT auth.uid())::text = (storage.foldername(name))[1]
   );
 
 CREATE POLICY "Users can read their own audio files"
-  ON storage.objects FOR SELECT
+  ON storage.objects
+  FOR SELECT
   USING (
-    bucket_id = 'audio-recordings' AND
-    auth.uid()::text = (storage.foldername(name))[1]
+    bucket_id = 'audio-recordings'
+    AND (SELECT auth.uid())::text = (storage.foldername(name))[1]
   );
 
 CREATE POLICY "Users can update their own audio files"
-  ON storage.objects FOR UPDATE
+  ON storage.objects
+  FOR UPDATE
   USING (
-    bucket_id = 'audio-recordings' AND
-    auth.uid()::text = (storage.foldername(name))[1]
+    bucket_id = 'audio-recordings'
+    AND (SELECT auth.uid())::text = (storage.foldername(name))[1]
+  )
+  WITH CHECK (
+    bucket_id = 'audio-recordings'
+    AND (SELECT auth.uid())::text = (storage.foldername(name))[1]
   );
 
 CREATE POLICY "Users can delete their own audio files"
-  ON storage.objects FOR DELETE
+  ON storage.objects
+  FOR DELETE
   USING (
-    bucket_id = 'audio-recordings' AND
-    auth.uid()::text = (storage.foldername(name))[1]
+    bucket_id = 'audio-recordings'
+    AND (SELECT auth.uid())::text = (storage.foldername(name))[1]
   );
 
 -- Function to automatically update updated_at timestamp
@@ -186,7 +230,7 @@ CREATE TRIGGER update_segments_updated_at
 -- Create audit_logs table for comprehensive audit logging
 CREATE TABLE IF NOT EXISTS public.audit_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
+  user_id UUID NOT NULL,
   action TEXT NOT NULL,
   resource TEXT NOT NULL,
   resource_id TEXT,
@@ -220,7 +264,10 @@ DROP POLICY IF EXISTS "Prevent deletes" ON public.audit_logs;
 CREATE POLICY "Users can view their own audit logs"
   ON public.audit_logs
   FOR SELECT
-  USING (auth.uid()::text = user_id);
+  USING (
+    (SELECT auth.uid()) IS NOT NULL
+    AND (SELECT auth.uid()) = user_id
+  );
 
 -- Policy: Prevent users from inserting audit logs directly (only through API)
 CREATE POLICY "Prevent direct inserts"
