@@ -347,7 +347,7 @@ export function ApiKeysSettings() {
           <p className="text-sm text-muted-foreground">
             API keys are encrypted using AES-256-GCM before storage. Never share your API keys
             with anyone. If you suspect a key has been compromised, regenerate it immediately
-            from the provider's dashboard.
+            from the provider&apos;s dashboard.
           </p>
         </CardContent>
       </Card>

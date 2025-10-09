@@ -3,6 +3,8 @@
  * Uses multiple NTP servers with fallback for reliability
  */
 
+import dgram from 'dgram'
+
 // NTP server pool (NIST and pool.ntp.org)
 const NTP_SERVERS = [
   'time.nist.gov',
@@ -73,7 +75,6 @@ function parseNTPResponse(packet: Buffer, requestTime: number, responseTime: num
  */
 async function fetchFromServer(server: string): Promise<NTPResponse> {
   return new Promise((resolve, reject) => {
-    const dgram = require('dgram')
     const client = dgram.createSocket('udp4')
 
     const timeout = setTimeout(() => {

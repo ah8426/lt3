@@ -108,7 +108,7 @@ export default function DashboardPage() {
           Welcome back, {displayName}!
         </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Here's what's happening with your legal dictation today.
+          Here&apos;s what&apos;s happening with your legal dictation today.
         </p>
       </div>
 
@@ -243,7 +243,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <p className="text-gray-700 dark:text-gray-300">
-            Use voice commands like "new paragraph" or "insert comma" to format your dictation in real-time.
+            Use voice commands like &quot;new paragraph&quot; or &quot;insert comma&quot; to format your dictation in real-time.
             This saves time during transcription review.
           </p>
           <Link href="/help">

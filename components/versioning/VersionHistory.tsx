@@ -231,7 +231,7 @@ export function VersionHistory({
 
                         {version.changeReason && (
                           <p className="text-sm italic text-muted-foreground">
-                            "{version.changeReason}"
+                            &quot;{version.changeReason}&quot;
                           </p>
                         )}
 

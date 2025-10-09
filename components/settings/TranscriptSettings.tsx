@@ -188,7 +188,7 @@ export function TranscriptSettings() {
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="realtime" id="realtime" />
                       <Label htmlFor="realtime" className="font-normal">
-                        Real-time (every segment as it's created)
+                        Real-time (every segment as it&apos;s created)
                         <Badge variant="outline" className="ml-2">Highest security</Badge>
                       </Label>
                     </div>
@@ -245,7 +245,7 @@ export function TranscriptSettings() {
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    With this enabled, you won't be able to export or share transcripts until all timestamp proofs are verified.
+                    With this enabled, you won&apos;t be able to export or share transcripts until all timestamp proofs are verified.
                   </AlertDescription>
                 </Alert>
               )}
@@ -386,7 +386,7 @@ export function TranscriptSettings() {
             <Alert>
               <Info className="h-4 w-4" />
               <AlertDescription>
-                Version control is disabled. You won't be able to restore previous versions or track changes.
+                Version control is disabled. You won&apos;t be able to restore previous versions or track changes.
               </AlertDescription>
             </Alert>
           )}

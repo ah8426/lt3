@@ -75,7 +75,7 @@ export default function MatterDetailsPage() {
           Matter not found
         </h3>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          The matter you're looking for doesn't exist or you don't have access to it.
+          The matter you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
         </p>
         <Link href="/matters">
           <Button className="mt-4 bg-[#00BFA5] hover:bg-[#00BFA5]/90">
@@ -540,7 +540,7 @@ export default function MatterDetailsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Archive Matter</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to archive "{matter.name}"? This will not delete
+              Are you sure you want to archive &quot;{matter.name}&quot;? This will not delete
               any data, but the matter will be moved to archived status.
             </AlertDialogDescription>
           </AlertDialogHeader>

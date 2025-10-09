@@ -147,7 +147,7 @@ export function AIProviderSettings() {
             <div className="space-y-0.5">
               <Label>Streaming Responses</Label>
               <p className="text-sm text-muted-foreground">
-                Show AI responses as they're generated
+                Show AI responses as they&apos;re generated
               </p>
             </div>
             <Switch
