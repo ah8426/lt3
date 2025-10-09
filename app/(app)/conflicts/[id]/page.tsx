@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Calendar, User, FileText, Loader2, Save } from 'lucide-react'
 import { ConflictReport } from '@/components/conflicts/ConflictReport'
 import { useConflicts } from '@/hooks/useConflicts'
-import { ConflictStatus } from '@/lib/conflicts/conflict-checker'
+import { ConflictStatus } from '@/lib/conflicts/types'
 import { format } from 'date-fns'
 
 const statusConfig = {

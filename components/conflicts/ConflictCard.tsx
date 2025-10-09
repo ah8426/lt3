@@ -3,7 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AlertTriangle, Users, FileText, Briefcase } from 'lucide-react'
-import { ConflictMatch, RiskLevel } from '@/lib/conflicts/conflict-checker'
+import type { ConflictMatch } from '@/lib/conflicts/types'
+import { RiskLevel } from '@/lib/conflicts/types'
 import { cn } from '@/lib/utils'
 
 interface ConflictCardProps {

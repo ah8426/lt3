@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Plus, Search, X } from 'lucide-react'
 import { ConflictReport } from '@/components/conflicts/ConflictReport'
 import { useConflicts } from '@/hooks/useConflicts'
-import { ConflictCheckResult } from '@/lib/conflicts/conflict-checker'
+import type { ConflictCheckResult } from '@/lib/conflicts/types'
 
 export default function ConflictsPage() {
   const [clientName, setClientName] = useState('')

@@ -28,7 +28,7 @@ import Link from 'next/link';
 import type { CreateMatterInput } from '@/types/matter';
 import { JURISDICTIONS, COURT_TYPES } from '@/types/matter';
 import { ConflictReport } from '@/components/conflicts/ConflictReport';
-import { ConflictCheckResult } from '@/lib/conflicts/conflict-checker';
+import type { ConflictCheckResult } from '@/lib/conflicts/types';
 
 export default function NewMatterPage() {
   const router = useRouter();
