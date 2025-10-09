@@ -10,7 +10,6 @@ import {
   Clock,
   TrendingUp,
   HardDrive,
-  Plus,
   ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';

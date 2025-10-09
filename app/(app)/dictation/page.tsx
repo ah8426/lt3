@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useTranscription } from '@/hooks/useTranscription';
-import { AudioRecorder } from '@/components/dictation/AudioRecorder';
 import { TranscriptView } from '@/components/dictation/TranscriptView';
 import { SessionControls } from '@/components/dictation/SessionControls';
 import { WaveformVisualizer } from '@/components/dictation/WaveformVisualizer';
@@ -14,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useMatters } from '@/hooks/useMatters';
-import { AlertCircle, Mic, FileText, Waves, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Mic, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface SessionMetadata {
@@ -100,6 +99,51 @@ export default function DictationPage() {
     }));
   }, [isRecording, isPaused, duration]);
 
+  /**
+   * Auto-save progress
+   */
+  const handleAutoSave = useCallback(async () => {
+    if (segments.length === 0) return;
+
+    setSaveStatus('saving');
+
+    try {
+      const response = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: sessionId,
+          matter_id: sessionMetadata.matterId,
+          title: sessionMetadata.title,
+          transcript: getFullTranscript(),
+          duration_ms: duration,
+          status: sessionMetadata.status,
+          segments: segments.map((s) => ({
+            text: s.text,
+            speaker: s.speaker,
+            confidence: s.confidence,
+            start_time: s.startTime,
+            end_time: s.endTime,
+            is_final: s.isFinal,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Auto-save failed');
+      }
+
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+  }, [segments, sessionId, sessionMetadata, getFullTranscript, duration]);
+
   // Auto-save setup
   useEffect(() => {
     if (isRecording && !isPaused) {
@@ -117,14 +161,14 @@ export default function DictationPage() {
       clearInterval(autoSaveInterval);
       setAutoSaveInterval(null);
     }
-  }, [isRecording, isPaused]);
+  }, [isRecording, isPaused, handleAutoSave, autoSaveInterval]);
 
   // Save on pause or stop
   useEffect(() => {
     if ((isPaused || !isRecording) && segments.length > 0) {
       handleAutoSave();
     }
-  }, [isPaused, isRecording]);
+  }, [isPaused, isRecording, segments.length, handleAutoSave]);
 
   /**
    * Start recording and transcription
@@ -166,51 +210,6 @@ export default function DictationPage() {
       await handleSave(blob);
     } catch (error) {
       console.error('Failed to stop:', error);
-    }
-  };
-
-  /**
-   * Auto-save progress
-   */
-  const handleAutoSave = async () => {
-    if (segments.length === 0) return;
-
-    setSaveStatus('saving');
-
-    try {
-      const response = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: sessionId,
-          matter_id: sessionMetadata.matterId,
-          title: sessionMetadata.title,
-          transcript: getFullTranscript(),
-          duration_ms: duration,
-          status: sessionMetadata.status,
-          segments: segments.map((s) => ({
-            text: s.text,
-            speaker: s.speaker,
-            confidence: s.confidence,
-            start_time: s.startTime,
-            end_time: s.endTime,
-            is_final: s.isFinal,
-          })),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Auto-save failed');
-      }
-
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (error) {
-      console.error('Auto-save error:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 

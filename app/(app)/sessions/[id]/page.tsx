@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useSession } from '@/hooks/useSession';
+import { useSession, type Segment } from '@/hooks/useSession';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -317,7 +317,7 @@ export default function SessionDetailPage() {
             <CardContent>
               <ScrollArea className="h-[600px] pr-4">
                 <div className="space-y-4">
-                  {segments?.map((segment: any) => (
+                  {segments?.map((segment: Segment) => (
                     <TranscriptSegmentEditor
                       key={segment.id}
                       segment={segment}
