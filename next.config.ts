@@ -84,12 +84,16 @@ const nextConfig: NextConfig = {
       ...(config.ignoreWarnings || []),
       // Suppress webpack cache serialization warnings for large strings
       /Serializing big strings/,
+      // Suppress optional dependency warnings from natural NLP library
+      /Can't resolve 'webworker-threads'/,
     ]
 
-    // Externalize heavy server-only packages
+    // Externalize heavy server-only packages and optional dependencies
     config.externals.push({
       'utf-8-validate': 'commonjs utf-8-validate',
       'bufferutil': 'commonjs bufferutil',
+      // Optional dependencies from 'natural' that aren't needed
+      'webworker-threads': 'commonjs webworker-threads',
     })
 
     // Tree shaking for large libraries
