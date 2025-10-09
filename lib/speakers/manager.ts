@@ -6,12 +6,16 @@ export interface Speaker {
   id: string
   sessionId: string
   speakerNumber: number
-  name?: string
+  name: string
   role?: SpeakerRole
   organization?: string
-  color?: string
+  firstSpoke: Date
+  lastSpoke: Date
+  totalDuration: number
+  segmentCount: number
+  wordCount: number
+  metadata?: any
   createdAt: Date
-  updatedAt: Date
 }
 
 export type SpeakerRole =
@@ -50,7 +54,6 @@ export interface UpdateSpeakerParams {
   name?: string
   role?: SpeakerRole
   organization?: string
-  color?: string
   userId: string
 }
 
@@ -79,18 +82,19 @@ export async function createSpeaker(params: CreateSpeakerParams): Promise<Speake
     throw new Error(`Speaker ${speakerNumber} already exists for this session`)
   }
 
-  // Generate color for speaker
-  const color = generateSpeakerColor(speakerNumber)
-
   // Create speaker
   const speaker = await prisma.speaker.create({
     data: {
       sessionId,
       speakerNumber,
-      name,
+      name: name || `Speaker ${speakerNumber + 1}`,
       role,
       organization,
-      color,
+      firstSpoke: new Date(),
+      lastSpoke: new Date(),
+      totalDuration: 0,
+      segmentCount: 0,
+      wordCount: 0,
     },
   })
 
@@ -108,14 +112,14 @@ export async function createSpeaker(params: CreateSpeakerParams): Promise<Speake
     },
   })
 
-  return speaker
+  return speaker as Speaker
 }
 
 /**
  * Update speaker details
  */
 export async function updateSpeaker(params: UpdateSpeakerParams): Promise<Speaker> {
-  const { speakerId, name, role, organization, color, userId } = params
+  const { speakerId, name, role, organization, userId } = params
 
   // Get existing speaker
   const existing = await prisma.speaker.findUnique({
@@ -133,7 +137,6 @@ export async function updateSpeaker(params: UpdateSpeakerParams): Promise<Speake
       name,
       role,
       organization,
-      color,
     },
   })
 
@@ -157,7 +160,7 @@ export async function updateSpeaker(params: UpdateSpeakerParams): Promise<Speake
     },
   })
 
-  return speaker
+  return speaker as Speaker
 }
 
 /**
@@ -181,13 +184,14 @@ export async function mergeSpeakers(params: MergeSpeakersParams): Promise<void> 
   }
 
   // Update all segments from fromSpeaker to toSpeaker
-  await prisma.transcriptionSegment.updateMany({
+  await prisma.transcriptSegment.updateMany({
     where: {
       sessionId,
-      speaker: fromSpeaker.speakerNumber,
+      speakerId: fromSpeakerId,
     },
     data: {
-      speaker: toSpeaker.speakerNumber,
+      speakerId: toSpeakerId,
+      speakerName: toSpeaker.name,
     },
   })
 
@@ -255,10 +259,11 @@ export async function deleteSpeaker(
  * Get all speakers for a session
  */
 export async function getSpeakers(sessionId: string): Promise<Speaker[]> {
-  return prisma.speaker.findMany({
+  const speakers = await prisma.speaker.findMany({
     where: { sessionId },
     orderBy: { speakerNumber: 'asc' },
   })
+  return speakers as Speaker[]
 }
 
 /**
@@ -268,12 +273,13 @@ export async function getSpeakerByNumber(
   sessionId: string,
   speakerNumber: number
 ): Promise<Speaker | null> {
-  return prisma.speaker.findFirst({
+  const speaker = await prisma.speaker.findFirst({
     where: {
       sessionId,
       speakerNumber,
     },
   })
+  return speaker as Speaker | null
 }
 
 /**
@@ -295,7 +301,7 @@ export async function getOrCreateSpeaker(
     })
   }
 
-  return speaker
+  return speaker as Speaker
 }
 
 /**
@@ -310,12 +316,12 @@ export async function getSpeakerStats(
   if (!speaker) return null
 
   // Get all segments for this speaker
-  const segments = await prisma.transcriptionSegment.findMany({
+  const segments = await prisma.transcriptSegment.findMany({
     where: {
       sessionId,
-      speaker: speakerNumber,
+      speakerId: speaker.id,
     },
-    orderBy: { startTime: 'asc' },
+    orderBy: { startMs: 'asc' },
   })
 
   if (segments.length === 0) {
@@ -399,13 +405,13 @@ export async function autoDetectSpeakers(
     .filter((n): n is number => n !== null)
 
   // Create speakers for each unique number
-  const speakers = []
+  const speakers: Speaker[] = []
   for (const speakerNumber of speakerNumbers) {
     const speaker = await getOrCreateSpeaker(sessionId, speakerNumber, userId)
     speakers.push(speaker)
   }
 
-  return speakers
+  return speakers as Speaker[]
 }
 
 /**

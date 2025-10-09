@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate total billable amount for each matter
     const mattersWithStats = await Promise.all(
-      matters.map(async (matter) => {
+      matters.map(async (matter: any) => {
         const billableStats = await prisma.billableTime.aggregate({
           where: {
             matterId: matter.id,

@@ -138,7 +138,6 @@ export async function PATCH(
       name: validated.name,
       role: validated.role as SpeakerRole | undefined,
       organization: validated.organization,
-      color: validated.color,
       userId: user.id,
     })
 
