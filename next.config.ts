@@ -74,11 +74,6 @@ const nextConfig: NextConfig = {
     // Fix for Windows case-sensitivity issues
     config.resolve.symlinks = false
 
-    // Configure cache to suppress large string warnings
-    if (config.cache && typeof config.cache !== 'boolean') {
-      config.cache.maxGenerations = dev ? 5 : Infinity
-    }
-
     // Suppress specific warnings
     config.ignoreWarnings = [
       ...(config.ignoreWarnings || []),
