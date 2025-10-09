@@ -297,7 +297,14 @@ export default function MatterDetailsPage() {
         <TabsContent value="sessions" className="space-y-4">
           {matter.sessions && matter.sessions.length > 0 ? (
             <div className="space-y-4">
-              {matter.sessions.map((session) => (
+              {matter.sessions.map((session: {
+                id: string;
+                title: string;
+                status: string;
+                startedAt: string;
+                endedAt: string | null;
+                durationMs: number | null;
+              }) => (
                 <Link key={session.id} href={`/sessions/${session.id}`}>
                   <Card className="hover:border-[#00BFA5] transition-colors cursor-pointer">
                     <CardContent className="pt-6">
@@ -367,7 +374,12 @@ export default function MatterDetailsPage() {
         <TabsContent value="documents" className="space-y-4">
           {matter.documents && matter.documents.length > 0 ? (
             <div className="space-y-4">
-              {matter.documents.map((document) => (
+              {matter.documents.map((document: {
+                id: string;
+                title: string;
+                format: string;
+                createdAt: string;
+              }) => (
                 <Link key={document.id} href={`/documents/${document.id}`}>
                   <Card className="hover:border-[#00BFA5] transition-colors cursor-pointer">
                     <CardContent className="pt-6">
@@ -422,7 +434,13 @@ export default function MatterDetailsPage() {
         <TabsContent value="billing" className="space-y-4">
           {matter.billableTime && matter.billableTime.length > 0 ? (
             <div className="space-y-4">
-              {matter.billableTime.map((entry) => (
+              {matter.billableTime.map((entry: {
+                id: string;
+                description: string | null;
+                createdAt: string;
+                billableSeconds: number;
+                amount: number;
+              }) => (
                 <Card key={entry.id}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
@@ -487,13 +505,21 @@ export default function MatterDetailsPage() {
         <TabsContent value="conflicts" className="space-y-4">
           {matter.conflictChecks && matter.conflictChecks.length > 0 ? (
             <div className="space-y-4">
-              {matter.conflictChecks.map((check) => (
+              {matter.conflictChecks.map((check: {
+                id: string;
+                clientName: string | null;
+                riskLevel: string;
+                totalMatches: number;
+                recommendation: string;
+                summary: string;
+                createdAt: string;
+              }) => (
                 <Card key={check.id}>
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900 dark:text-white">
-                          {check.partyName}
+                          {check.clientName || 'Conflict Check'}
                         </h3>
                         <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
                           <span className="flex items-center">
@@ -503,13 +529,13 @@ export default function MatterDetailsPage() {
                         </div>
                       </div>
                       <div>
-                        {check.hasConflict ? (
+                        {check.totalMatches > 0 ? (
                           <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                            Conflict Found
+                            {check.totalMatches} Conflict{check.totalMatches > 1 ? 's' : ''} Found
                           </span>
                         ) : (
                           <span className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                            No Conflict
+                            No Conflicts
                           </span>
                         )}
                       </div>

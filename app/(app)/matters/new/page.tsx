@@ -124,8 +124,8 @@ export default function NewMatterPage() {
 
   const createMatterAfterConflictCheck = async (data: CreateMatterInput) => {
     try {
-      const result = await createMatter.mutateAsync(data);
-      router.push(`/matters/${result.matter.id}`);
+      const matter = await createMatter.mutateAsync(data);
+      router.push(`/matters/${matter.id}`);
     } catch (error) {
       console.error('Error creating matter:', error);
       setErrors({

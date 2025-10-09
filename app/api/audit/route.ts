@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform data to match AuditLog interface
-    const logs = (data || []).map((log) => ({
+    const logs = (data || []).map((log: any) => ({
       id: log.id,
       userId: log.user_id,
       action: log.action as AuditAction,

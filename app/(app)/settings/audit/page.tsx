@@ -71,6 +71,23 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   [AuditAction.SEGMENT_DELETE]: 'Segment Deleted',
   [AuditAction.SEGMENT_MERGE]: 'Segments Merged',
   [AuditAction.SEGMENT_SPLIT]: 'Segment Split',
+  [AuditAction.VERSION_CREATE]: 'Version Created',
+  [AuditAction.VERSION_RESTORE]: 'Version Restored',
+  [AuditAction.VERSION_COMPARE]: 'Version Compared',
+  [AuditAction.TIMESTAMP_CREATE]: 'Timestamp Created',
+  [AuditAction.TIMESTAMP_VERIFY]: 'Timestamp Verified',
+  [AuditAction.TIMESTAMP_EXPORT]: 'Timestamp Exported',
+  [AuditAction.SPEAKER_CREATE]: 'Speaker Created',
+  [AuditAction.SPEAKER_UPDATE]: 'Speaker Updated',
+  [AuditAction.SPEAKER_DELETE]: 'Speaker Deleted',
+  [AuditAction.SPEAKER_MERGE]: 'Speakers Merged',
+  [AuditAction.REDACTION_CREATE]: 'Redaction Created',
+  [AuditAction.REDACTION_UPDATE]: 'Redaction Updated',
+  [AuditAction.REDACTION_DELETE]: 'Redaction Deleted',
+  [AuditAction.REDACTION_UNREDACT]: 'Redaction Removed',
+  [AuditAction.PII_DETECT]: 'PII Detected',
+  [AuditAction.TRANSCRIPT_VIEW]: 'Transcript Viewed',
+  [AuditAction.SESSION_VIEW]: 'Session Viewed',
 };
 
 const RESOURCE_LABELS: Record<AuditResource, string> = {

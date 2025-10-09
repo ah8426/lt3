@@ -50,10 +50,6 @@ export async function GET(
         billableTime: {
           orderBy: { createdAt: 'desc' },
         },
-        conflictChecks: {
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        },
         _count: {
           select: {
             sessions: true,
