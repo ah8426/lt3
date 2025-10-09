@@ -22,11 +22,11 @@ const createVersionSchema = z.object({
 // GET /api/sessions/[id]/versions - Get version history
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
-    const sessionId = params.id
+    const { id: sessionId } = await params
 
     // Verify session ownership
     const session = await prisma.session.findUnique({
@@ -71,11 +71,11 @@ export async function GET(
 // POST /api/sessions/[id]/versions - Create new version
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
-    const sessionId = params.id
+    const { id: sessionId } = await params
 
     // Verify session ownership
     const session = await prisma.session.findUnique({

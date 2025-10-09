@@ -18,7 +18,7 @@ const updateResolutionSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -30,9 +30,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const conflictCheck = await prisma.conflictCheck.findUnique({
       where: {
-        id: params.id,
+        id,
         userId: user.id,
       },
     })
@@ -60,7 +62,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -72,10 +74,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     // Verify ownership
     const existing = await prisma.conflictCheck.findUnique({
       where: {
-        id: params.id,
+        id,
         userId: user.id,
       },
     })
@@ -91,7 +95,7 @@ export async function PATCH(
     const validated = updateResolutionSchema.parse(body)
 
     await updateConflictResolution(
-      params.id,
+      id,
       validated.status as ConflictStatus,
       validated.notes,
       user.id

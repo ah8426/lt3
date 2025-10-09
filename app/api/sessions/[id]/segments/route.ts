@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
 
@@ -24,7 +24,7 @@ export async function GET(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
 
     // Verify session belongs to user
     const { data: session, error: sessionError } = await supabase
@@ -70,7 +70,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
 
@@ -83,7 +83,7 @@ export async function POST(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
     const body = await request.json();
 
     const { text, speaker, confidence, start_time, end_time, is_final } = body;
@@ -157,7 +157,7 @@ export async function POST(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
 
@@ -170,7 +170,7 @@ export async function PATCH(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
     const body = await request.json();
 
     const { segment_id, text, speaker, confidence, start_time, end_time, is_final } =
@@ -262,7 +262,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
 
@@ -275,7 +275,7 @@ export async function DELETE(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
     const url = new URL(request.url);
     const segmentId = url.searchParams.get('segment_id');
 

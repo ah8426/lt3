@@ -22,7 +22,7 @@ const updateAccessSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; redactionId: string } }
+  { params }: { params: Promise<{ id: string; redactionId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -34,14 +34,16 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const redaction = await getRedaction(params.redactionId)
+    const { id, redactionId } = await params
+
+    const redaction = await getRedaction(redactionId)
 
     if (!redaction) {
       return NextResponse.json({ error: 'Redaction not found' }, { status: 404 })
     }
 
     // Verify session ID matches
-    if (redaction.sessionId !== params.id) {
+    if (redaction.sessionId !== id) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
@@ -61,7 +63,7 @@ export async function GET(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; redactionId: string } }
+  { params }: { params: Promise<{ id: string; redactionId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -73,7 +75,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await deleteRedaction(params.redactionId, user.id)
+    const { redactionId } = await params
+
+    await deleteRedaction(redactionId, user.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -96,7 +100,7 @@ export async function DELETE(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; redactionId: string } }
+  { params }: { params: Promise<{ id: string; redactionId: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -108,6 +112,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { redactionId } = await params
     const body = await request.json()
 
     // Check if this is an access control update
@@ -115,7 +120,7 @@ export async function POST(
       const validated = updateAccessSchema.parse(body)
 
       const redaction = await updateAccessControl(
-        params.redactionId,
+        redactionId,
         user.id,
         validated.accessControl
       )
@@ -127,7 +132,7 @@ export async function POST(
     const validated = unredactSchema.parse(body)
 
     const originalText = await unredact({
-      redactionId: params.redactionId,
+      redactionId,
       userId: user.id,
       reason: validated.reason,
     })

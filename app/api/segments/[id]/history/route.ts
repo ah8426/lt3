@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient()
 
@@ -22,7 +22,7 @@ export async function GET(
   }
 
   try {
-    const segmentId = params.id
+    const { id: segmentId } = await params
 
     // Verify segment exists and user has access to it
     const { data: segment, error: segmentError } = await supabase

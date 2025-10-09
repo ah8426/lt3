@@ -33,7 +33,7 @@ const createSpeakerSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerClient()
@@ -45,7 +45,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const sessionId = params.id
+    const { id: sessionId } = await params
     const { searchParams } = new URL(request.url)
     const includeStats = searchParams.get('stats') === 'true'
     const autoDetect = searchParams.get('autoDetect') === 'true'
@@ -94,7 +94,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerClient()
@@ -106,7 +106,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const sessionId = params.id
+    const { id: sessionId } = await params
 
     // Verify user owns the session
     const { data: session } = await supabase

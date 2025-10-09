@@ -10,11 +10,11 @@ import {
 // GET /api/timestamp/verify/[id] - Verify timestamp proof
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
-    const proofId = params.id
+    const { id: proofId } = await params
 
     // Check if verifying chain of custody for a session
     const searchParams = request.nextUrl.searchParams

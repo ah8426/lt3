@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
 
@@ -24,7 +24,7 @@ export async function GET(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
 
     // Get session
     const { data: session, error: sessionError } = await supabase
@@ -90,7 +90,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
 
@@ -103,7 +103,7 @@ export async function PATCH(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
     const body = await request.json();
 
     // Only allow updating certain fields
@@ -168,7 +168,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createClient();
 
@@ -181,7 +181,7 @@ export async function DELETE(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
 
     // Get session to find audio file
     const { data: session } = await supabase

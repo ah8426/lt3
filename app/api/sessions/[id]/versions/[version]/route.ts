@@ -16,12 +16,12 @@ const restoreSchema = z.object({
 // GET /api/sessions/[id]/versions/[version] - Get specific version or compare
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; version: string } }
+  { params }: { params: Promise<{ id: string; version: string }> }
 ) {
   try {
     const user = await requireAuth()
-    const sessionId = params.id
-    const versionNumber = parseInt(params.version)
+    const { id: sessionId, version } = await params
+    const versionNumber = parseInt(version)
 
     if (isNaN(versionNumber)) {
       return NextResponse.json({ error: 'Invalid version number' }, { status: 400 })
@@ -96,12 +96,12 @@ export async function GET(
 // POST /api/sessions/[id]/versions/[version] - Restore version
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; version: string } }
+  { params }: { params: Promise<{ id: string; version: string }> }
 ) {
   try {
     const user = await requireAuth()
-    const sessionId = params.id
-    const versionNumber = parseInt(params.version)
+    const { id: sessionId, version } = await params
+    const versionNumber = parseInt(version)
 
     if (isNaN(versionNumber)) {
       return NextResponse.json({ error: 'Invalid version number' }, { status: 400 })

@@ -38,7 +38,7 @@ const mergeSpeakersSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string; speakerId: string } }
+  { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
     const supabase = await createServerClient()
@@ -50,8 +50,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const sessionId = params.id
-    const speakerId = params.speakerId
+    const { id: sessionId, speakerId } = await params
 
     // Verify user owns the session
     const { data: session } = await supabase
@@ -95,7 +94,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string; speakerId: string } }
+  { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
     const supabase = await createServerClient()
@@ -107,8 +106,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const sessionId = params.id
-    const speakerId = params.speakerId
+    const { id: sessionId, speakerId } = await params
 
     // Verify user owns the session
     const { data: session } = await supabase
@@ -167,7 +165,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; speakerId: string } }
+  { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
     const supabase = await createServerClient()
@@ -179,8 +177,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const sessionId = params.id
-    const speakerId = params.speakerId
+    const { id: sessionId, speakerId } = await params
 
     // Verify user owns the session
     const { data: session } = await supabase
@@ -221,7 +218,7 @@ export async function DELETE(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string; speakerId: string } }
+  { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
     const supabase = await createServerClient()
@@ -233,8 +230,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const sessionId = params.id
-    const speakerId = params.speakerId
+    const { id: sessionId, speakerId } = await params
 
     // Check if this is a merge request
     const { pathname } = new URL(request.url)
