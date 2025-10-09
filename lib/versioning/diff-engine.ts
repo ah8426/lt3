@@ -1,4 +1,5 @@
 import * as Diff from 'diff'
+import type { Change } from 'diff'
 
 export interface DiffResult {
   summary: {
@@ -44,7 +45,7 @@ export function calculateTextDiff(oldText: string, newText: string): DiffResult 
 
   const result: DiffResult['changes'] = []
 
-  changes.forEach((change) => {
+  changes.forEach((change: Change) => {
     if (change.added) {
       summary.added += change.value.length
       result.push({
@@ -86,7 +87,7 @@ export function calculateLineDiff(oldText: string, newText: string): DiffResult 
   let oldLineNum = 1
   let newLineNum = 1
 
-  changes.forEach((change) => {
+  changes.forEach((change: Change) => {
     const lineCount = change.value.split('\n').length - 1 || 1
 
     if (change.added) {
@@ -160,7 +161,7 @@ export function compareSegments(
       // Modified segment
       summary.modified++
       const textDiff = Diff.diffWords(oldSeg.text, newSeg.text)
-      const changes = textDiff.map((change) => ({
+      const changes = textDiff.map((change: Change) => ({
         type: change.added ? 'added' : change.removed ? 'removed' : 'unchanged',
         value: change.value,
       })) as any[]
