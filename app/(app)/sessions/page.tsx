@@ -246,7 +246,7 @@ export default function SessionsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All matters</SelectItem>
-                {mattersData?.matters.map((matter) => (
+                {mattersData?.map((matter) => (
                   <SelectItem key={matter.id} value={matter.id}>
                     {matter.name}
                   </SelectItem>

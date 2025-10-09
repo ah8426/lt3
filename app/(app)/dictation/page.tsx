@@ -303,7 +303,7 @@ export default function DictationPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No matter</SelectItem>
-                    {matters?.matters.map((matter) => (
+                    {matters?.map((matter) => (
                       <SelectItem key={matter.id} value={matter.id}>
                         {matter.name}
                       </SelectItem>

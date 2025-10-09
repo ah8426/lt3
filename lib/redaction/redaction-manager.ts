@@ -6,7 +6,8 @@
 
 import { prisma } from '@/lib/prisma'
 import { PIIType } from './pii-detector'
-import { AuditAction, AuditResource, logAction } from '@/lib/audit/logger'
+import { AuditAction, AuditResource } from '@/types/audit'
+import { logAction } from '@/lib/audit/logger'
 import { xchacha20poly1305 } from '@noble/ciphers/chacha'
 import { randomBytes } from '@noble/hashes/utils'
 import { sha256 } from '@noble/hashes/sha256'

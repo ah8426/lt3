@@ -6,7 +6,8 @@ import {
   CreateRedactionParams,
 } from '@/lib/redaction/redaction-manager'
 import { detectPII, PIIType, DetectPIIOptions } from '@/lib/redaction/pii-detector'
-import { AuditAction, AuditResource, logAction } from '@/lib/audit/logger'
+import { AuditAction, AuditResource } from '@/types/audit'
+import { logAction } from '@/lib/audit/logger'
 import { z } from 'zod'
 
 const createRedactionSchema = z.object({

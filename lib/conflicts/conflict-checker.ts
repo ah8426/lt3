@@ -12,7 +12,7 @@ import {
   extractEntities,
   calculateTextSimilarity,
 } from './name-matcher'
-import type { AuditAction, AuditResource } from '@/lib/audit/logger'
+import { AuditAction, AuditResource } from '@/types/audit'
 import { logAction } from '@/lib/audit/logger'
 
 // Re-export types from separate file to avoid server-only imports in client components
