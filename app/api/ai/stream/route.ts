@@ -1,7 +1,12 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { AIProviderManager } from '@/lib/ai/provider-manager'
-import type { AIProvider, AICompletionOptions, AIStreamChunk } from '@/types/ai'
+import type {
+  AIProvider,
+  AICompletionOptions,
+  AIStreamChunk,
+  AIProviderConfig,
+} from '@/types/ai'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -50,10 +55,27 @@ export async function POST(request: NextRequest) {
 
     // Get API keys from database
     const apiKeys = await getDecryptedApiKeys(user.id)
+    const providerConfigs = createProviderConfigs(apiKeys)
+
+    if (providerConfigs.size === 0) {
+      console.warn('AI stream requested with no providers configured', {
+        userId: user.id,
+      })
+
+      return new Response(
+        JSON.stringify({
+          error: 'No AI providers are configured for this workspace',
+        }),
+        {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+    }
 
     // Initialize provider manager
     const manager = new AIProviderManager({
-      providers: createProviderConfigs(apiKeys),
+      providers: providerConfigs,
       failover: {
         providers: ['anthropic', 'openai', 'google', 'openrouter'],
         maxRetries: 3,
@@ -160,8 +182,10 @@ export async function POST(request: NextRequest) {
 /**
  * Get decrypted API keys for user
  */
-async function getDecryptedApiKeys(userId: string): Promise<Record<string, string>> {
-  const keys: Record<string, string> = {}
+async function getDecryptedApiKeys(
+  userId: string
+): Promise<Partial<Record<AIProvider, string>>> {
+  const keys: Partial<Record<AIProvider, string>> = {}
 
   // Get from environment variables for now
   if (process.env.ANTHROPIC_API_KEY) {
@@ -186,8 +210,10 @@ async function getDecryptedApiKeys(userId: string): Promise<Record<string, strin
 /**
  * Create provider configs from API keys
  */
-function createProviderConfigs(apiKeys: Record<string, string>) {
-  const configs = new Map()
+function createProviderConfigs(
+  apiKeys: Partial<Record<AIProvider, string>>
+) {
+  const configs = new Map<AIProvider, AIProviderConfig>()
 
   if (apiKeys.anthropic) {
     configs.set('anthropic', {
