@@ -178,15 +178,15 @@ model UsageMetrics {
 model Matter {
   id              String   @id @default(cuid())
   name            String
-  clientName      String
-  adverseParty    String?
+  clientName      String   @map("client_name")
+  adverseParty    String?  @map("adverse_party")
   jurisdiction    String?
-  courtType       String?
-  caseNumber      String?
+  courtType       String?  @map("court_type")
+  caseNumber      String?  @map("case_number")
   status          String   @default("active")
-  userId          String   @db.Uuid
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  userId          String   @map("user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   sessions        Session[]
@@ -292,18 +292,18 @@ model AuditLog {
 
 model TranscriptVersion {
   id              String   @id @default(cuid())
-  sessionId       String
+  sessionId       String   @map("session_id")
   version         Int
 
   segments        Json
 
-  changeType      String
-  changedBy       String
-  changeReason    String?
+  changeType      String   @map("change_type")
+  changedBy       String   @map("changed_by")
+  changeReason    String?  @map("change_reason")
 
-  diffSummary     Json?
+  diffSummary     Json?    @map("diff_summary")
 
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -319,21 +319,21 @@ model TranscriptVersion {
 
 model TimestampProof {
   id              String   @id @default(cuid())
-  sessionId       String
-  segmentId       String
+  sessionId       String   @map("session_id")
+  segmentId       String   @map("segment_id")
 
-  contentHash     String
+  contentHash     String   @map("content_hash")
   timestamp       DateTime
-  timestampSource String
+  timestampSource String   @map("timestamp_source")
 
-  rfc3161Token    String?  @db.Text
+  rfc3161Token    String?  @map("rfc3161_token") @db.Text
 
-  isVerified      Boolean  @default(false)
-  verifiedAt      DateTime?
-  verifiedBy      String?
-  verificationMethod String?
+  isVerified      Boolean  @default(false) @map("is_verified")
+  verifiedAt      DateTime? @map("verified_at")
+  verifiedBy      String?  @map("verified_by")
+  verificationMethod String? @map("verification_method")
 
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   segment         TranscriptSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
@@ -350,7 +350,7 @@ model TimestampProof {
 
 model Speaker {
   id              String   @id @default(cuid())
-  sessionId       String
+  sessionId       String   @map("session_id")
 
   name            String
   role            String?
@@ -358,14 +358,14 @@ model Speaker {
 
   voiceprint      Json?
 
-  firstSpoke      DateTime
-  lastSpoke       DateTime
-  totalDuration   Int
-  segmentCount    Int
-  wordCount       Int      @default(0)
+  firstSpoke      DateTime @map("first_spoke")
+  lastSpoke       DateTime @map("last_spoke")
+  totalDuration   Int      @map("total_duration")
+  segmentCount    Int      @map("segment_count")
+  wordCount       Int      @default(0) @map("word_count")
 
   metadata        Json     @default("{}")
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   segments        TranscriptSegment[]
@@ -420,24 +420,24 @@ model Redaction {
 
 model TranscriptSegment {
   id              String   @id @default(cuid())
-  sessionId       String
+  sessionId       String   @map("session_id")
 
-  startMs         Int
-  endMs           Int
+  startMs         Int      @map("start_ms")
+  endMs           Int      @map("end_ms")
 
   text            String   @db.Text
 
-  speakerId       String?
-  speakerName     String?
+  speakerId       String?  @map("speaker_id")
+  speakerName     String?  @map("speaker_name")
 
   confidence      Float?
   provider        String?
 
-  isFinal         Boolean  @default(false)
-  isEdited        Boolean  @default(false)
-  editedBy        String?
+  isFinal         Boolean  @default(false) @map("is_final")
+  isEdited        Boolean  @default(false) @map("is_edited")
+  editedBy        String?  @map("edited_by")
 
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   speaker         Speaker? @relation(fields: [speakerId], references: [id], onDelete: SetNull)
@@ -451,13 +451,13 @@ model TranscriptSegment {
 
 model TranscriptAccessLog {
   id              String   @id @default(cuid())
-  sessionId       String
-  userId          String?  @db.Uuid
-  accessType      String
-  accessMethod    String
+  sessionId       String   @map("session_id")
+  userId          String?  @map("user_id") @db.Uuid
+  accessType      String   @map("access_type")
+  accessMethod    String   @map("access_method")
   timestamp       DateTime @default(now())
-  ipAddress       String?
-  userAgent       String?
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
 
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -472,7 +472,7 @@ model TranscriptAccessLog {
 
 model ChatMessage {
   id              String   @id @default(cuid())
-  sessionId       String
+  sessionId       String   @map("session_id")
 
   role            String
   content         String   @db.Text
@@ -482,9 +482,9 @@ model ChatMessage {
   tokens          Int?
   cost            Float?
 
-  contextUsed     Json?
+  contextUsed     Json?    @map("context_used")
 
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   citations       Citation[]
@@ -523,39 +523,39 @@ model ai_usage {
 
 model Citation {
   id              String   @id @default(cuid())
-  chatMessageId   String?
-  sessionId       String?
-  documentId      String?
+  chatMessageId   String?  @map("chat_message_id")
+  sessionId       String?  @map("session_id")
+  documentId      String?  @map("document_id")
 
-  citationType    String
-  fullCitation    String   @db.Text
-  shortCitation   String?
+  citationType    String   @map("citation_type")
+  fullCitation    String   @map("full_citation") @db.Text
+  shortCitation   String?  @map("short_citation")
 
   jurisdiction    String?
-  statuteCode     String?
+  statuteCode     String?  @map("statute_code")
   section         String?
 
-  caseName        String?
+  caseName        String?  @map("case_name")
   reporter        String?
   volume          Int?
   page            Int?
   year            Int?
   court           String?
 
-  isVerified      Boolean  @default(false)
-  verificationStatus String?
-  verifiedAt      DateTime?
-  verifiedBy      String?
-  verificationNotes String? @db.Text
+  isVerified      Boolean  @default(false) @map("is_verified")
+  verificationStatus String? @map("verification_status")
+  verifiedAt      DateTime? @map("verified_at")
+  verifiedBy      String?  @map("verified_by")
+  verificationNotes String? @map("verification_notes") @db.Text
 
-  treatmentStatus String?
-  treatmentNotes  String?  @db.Text
+  treatmentStatus String?  @map("treatment_status")
+  treatmentNotes  String?  @map("treatment_notes") @db.Text
 
-  westlawUrl      String?
-  lexisUrl        String?
-  publicUrl       String?
+  westlawUrl      String?  @map("westlaw_url")
+  lexisUrl        String?  @map("lexis_url")
+  publicUrl       String?  @map("public_url")
 
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   chatMessage     ChatMessage? @relation(fields: [chatMessageId], references: [id], onDelete: Cascade)
 
@@ -571,31 +571,31 @@ model Citation {
 
 model ExportJob {
   id                      String   @id @default(cuid())
-  sessionId               String
-  userId                  String   @db.Uuid
+  sessionId               String   @map("session_id")
+  userId                  String   @map("user_id") @db.Uuid
 
   format                  String
   template                String?
 
-  includeLineNumbers      Boolean  @default(false)
-  includeTimestamps       Boolean  @default(true)
-  includePageNumbers      Boolean  @default(true)
-  includeCertification    Boolean  @default(false)
-  includeIndexPage        Boolean  @default(false)
-  includeTableOfContents  Boolean  @default(false)
+  includeLineNumbers      Boolean  @default(false) @map("include_line_numbers")
+  includeTimestamps       Boolean  @default(true) @map("include_timestamps")
+  includePageNumbers      Boolean  @default(true) @map("include_page_numbers")
+  includeCertification    Boolean  @default(false) @map("include_certification")
+  includeIndexPage        Boolean  @default(false) @map("include_index_page")
+  includeTableOfContents  Boolean  @default(false) @map("include_table_of_contents")
 
-  certifiedBy             String?
-  certificationDate       DateTime?
-  certificationText       String?  @db.Text
-  barNumber               String?
+  certifiedBy             String?  @map("certified_by")
+  certificationDate       DateTime? @map("certification_date")
+  certificationText       String?  @map("certification_text") @db.Text
+  barNumber               String?  @map("bar_number")
 
   status                  String   @default("pending")
-  fileUrl                 String?
-  fileSize                Int?
+  fileUrl                 String?  @map("file_url")
+  fileSize                Int?     @map("file_size")
 
   error                   String?  @db.Text
-  createdAt               DateTime @default(now())
-  completedAt             DateTime?
+  createdAt               DateTime @default(now()) @map("created_at")
+  completedAt             DateTime? @map("completed_at")
 
   session                 Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   user                    User     @relation(fields: [userId], references: [id])
@@ -608,25 +608,25 @@ model ExportJob {
 
 model DocumentTemplate {
   id              String   @id @default(cuid())
-  userId          String   @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
   name            String
   description     String?  @db.Text
 
-  fileUrl         String
+  fileUrl         String   @map("file_url")
   fields          Json
 
-  courtType       String?
-  documentType    String?
+  courtType       String?  @map("court_type")
+  documentType    String?  @map("document_type")
   jurisdiction    String?
 
-  useCount        Int      @default(0)
-  lastUsed        DateTime?
+  useCount        Int      @default(0) @map("use_count")
+  lastUsed        DateTime? @map("last_used")
 
-  isPublic        Boolean  @default(false)
-  sharedWith      String[]
+  isPublic        Boolean  @default(false) @map("is_public")
+  sharedWith      String[] @map("shared_with")
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   generatedDocs   GeneratedDocument[]
@@ -638,23 +638,23 @@ model DocumentTemplate {
 
 model GeneratedDocument {
   id              String   @id @default(cuid())
-  templateId      String
-  sessionId       String?
-  matterId        String
-  userId          String   @db.Uuid
+  templateId      String   @map("template_id")
+  sessionId       String?  @map("session_id")
+  matterId        String   @map("matter_id")
+  userId          String   @map("user_id") @db.Uuid
 
-  fileName        String
-  fileUrl         String
+  fileName        String   @map("file_name")
+  fileUrl         String   @map("file_url")
   format          String
 
-  fieldValues     Json
+  fieldValues     Json     @map("field_values")
 
   version         Int      @default(1)
-  parentId        String?
+  parentId        String?  @map("parent_id")
 
   status          String   @default("draft")
 
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   template        DocumentTemplate @relation(fields: [templateId], references: [id])
   session         Session?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
@@ -717,28 +717,28 @@ model ConflictCheck {
 
 model Backup {
   id              String   @id @default(cuid())
-  userId          String?  @db.Uuid
+  userId          String?  @map("user_id") @db.Uuid
 
   type            String
   scope           String
-  scopeId         String?
+  scopeId         String?  @map("scope_id")
 
   size            Int
   checksum        String
 
-  encryptedWith   String?
-  includesAudio   Boolean  @default(false)
-  includesDocuments Boolean @default(true)
+  encryptedWith   String?  @map("encrypted_with")
+  includesAudio   Boolean  @default(false) @map("includes_audio")
+  includesDocuments Boolean @default(true) @map("includes_documents")
 
   metadata        Json     @default("{}")
 
   status          String   @default("pending")
   error           String?  @db.Text
 
-  createdAt       DateTime @default(now())
-  completedAt     DateTime?
-  lastRestoredAt  DateTime?
-  restoreCount    Int      @default(0)
+  createdAt       DateTime @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+  lastRestoredAt  DateTime? @map("last_restored_at")
+  restoreCount    Int      @default(0) @map("restore_count")
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -751,26 +751,26 @@ model Backup {
 
 model BillableTime {
   id              String   @id @default(cuid())
-  sessionId       String
-  matterId        String
-  userId          String   @db.Uuid
+  sessionId       String   @map("session_id")
+  matterId        String   @map("matter_id")
+  userId          String   @map("user_id") @db.Uuid
 
-  startTime       DateTime
-  endTime         DateTime
-  durationSeconds Int
-  billableSeconds Int
+  startTime       DateTime @map("start_time")
+  endTime         DateTime @map("end_time")
+  durationSeconds Int      @map("duration_seconds")
+  billableSeconds Int      @map("billable_seconds")
 
-  hourlyRate      Float
+  hourlyRate      Float    @map("hourly_rate")
   amount          Float
 
-  activityType    String
+  activityType    String   @map("activity_type")
   description     String?  @db.Text
 
   status          String   @default("draft")
-  invoiceId       String?
-  invoiceDate     DateTime?
+  invoiceId       String?  @map("invoice_id")
+  invoiceDate     DateTime? @map("invoice_date")
 
-  createdAt       DateTime @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
 
   session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   matter          Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
@@ -790,12 +790,12 @@ model FeatureFlag {
   id              String   @id @default(cuid())
   name            String   @unique
   description     String?  @db.Text
-  isEnabled       Boolean  @default(false)
-  rolloutPercent  Int      @default(0)
-  enabledForUsers String[]
+  isEnabled       Boolean  @default(false) @map("is_enabled")
+  rolloutPercent  Int      @default(0) @map("rollout_percent")
+  enabledForUsers String[] @map("enabled_for_users")
   metadata        Json     @default("{}")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@index([isEnabled])
   @@map("feature_flags")
