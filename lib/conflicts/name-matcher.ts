@@ -4,15 +4,7 @@
  * Provides fuzzy matching and entity extraction for conflict detection
  */
 
-// Polyfill for natural library which expects browser 'self' global
-if (typeof globalThis.self === 'undefined') {
-  ;(globalThis as any).self = globalThis
-}
-
 import fuzzysort from 'fuzzysort'
-import natural from 'natural'
-
-const { TfIdf, SentenceTokenizer, WordTokenizer } = natural
 
 // Common name variations
 const NAME_VARIATIONS: Record<string, string[]> = {
@@ -182,7 +174,7 @@ export function fuzzyMatchMultiple(
 }
 
 /**
- * Detect company names in text using NLP
+ * Detect company names in text using pattern matching
  */
 export function detectCompanyNames(text: string): string[] {
   const companies: string[] = []
@@ -209,16 +201,26 @@ export function detectCompanyNames(text: string): string[] {
 }
 
 /**
+ * Simple sentence tokenizer
+ */
+function tokenizeSentences(text: string): string[] {
+  // Split on sentence-ending punctuation followed by whitespace
+  return text
+    .split(/[.!?]+\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0)
+}
+
+/**
  * Extract entities (people, organizations) from text
  */
 export function extractEntities(text: string): EntityMatch[] {
   const entities: EntityMatch[] = []
 
   // Tokenize sentences
-  const sentenceTokenizer = new (SentenceTokenizer as any)()
-  const sentences = sentenceTokenizer.tokenize(text)
+  const sentences = tokenizeSentences(text)
 
-  sentences.forEach((sentence: any) => {
+  sentences.forEach((sentence) => {
     // Find capitalized sequences (potential names)
     const namePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g
     let match
@@ -280,38 +282,72 @@ export function extractEntities(text: string): EntityMatch[] {
 }
 
 /**
- * Calculate similarity between two texts using TF-IDF
+ * Simple word tokenizer
+ */
+function tokenizeWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 0)
+}
+
+/**
+ * Calculate term frequency
+ */
+function calculateTF(words: string[]): Map<string, number> {
+  const tf = new Map<string, number>()
+  const totalWords = words.length
+
+  words.forEach(word => {
+    tf.set(word, (tf.get(word) || 0) + 1)
+  })
+
+  // Normalize by total words
+  tf.forEach((count, word) => {
+    tf.set(word, count / totalWords)
+  })
+
+  return tf
+}
+
+/**
+ * Calculate text similarity using simple cosine similarity with word frequencies
+ * (simplified alternative to TF-IDF)
  */
 export function calculateTextSimilarity(text1: string, text2: string): number {
-  const tfidf = new TfIdf()
-  tfidf.addDocument(text1)
-  tfidf.addDocument(text2)
+  const words1 = tokenizeWords(text1)
+  const words2 = tokenizeWords(text2)
 
-  let similarity = 0
-  const terms1 = new Set<string>()
+  if (words1.length === 0 || words2.length === 0) {
+    return 0
+  }
 
-  // Get terms from first document
-  tfidf.listTerms(0).forEach((term) => {
-    terms1.add(term.term)
-  })
+  const tf1 = calculateTF(words1)
+  const tf2 = calculateTF(words2)
+
+  // Get all unique terms
+  const allTerms = new Set([...tf1.keys(), ...tf2.keys()])
 
   // Calculate cosine similarity
   let dotProduct = 0
   let magnitude1 = 0
   let magnitude2 = 0
 
-  terms1.forEach((term) => {
-    const tfidf1 = tfidf.tfidf(term, 0)
-    const tfidf2 = tfidf.tfidf(term, 1)
-    dotProduct += tfidf1 * tfidf2
-    magnitude1 += tfidf1 * tfidf1
-    magnitude2 += tfidf2 * tfidf2
+  allTerms.forEach(term => {
+    const freq1 = tf1.get(term) || 0
+    const freq2 = tf2.get(term) || 0
+
+    dotProduct += freq1 * freq2
+    magnitude1 += freq1 * freq1
+    magnitude2 += freq2 * freq2
   })
 
-  if (magnitude1 > 0 && magnitude2 > 0) {
-    similarity = dotProduct / (Math.sqrt(magnitude1) * Math.sqrt(magnitude2))
+  if (magnitude1 === 0 || magnitude2 === 0) {
+    return 0
   }
 
+  const similarity = dotProduct / (Math.sqrt(magnitude1) * Math.sqrt(magnitude2))
   return Math.max(0, Math.min(1, similarity))
 }
 

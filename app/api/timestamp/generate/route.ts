@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
       // Generate proofs
       const result = await generateBulkProofs({
-        segments: segments.map((seg) => ({
+        segments: segments.map((seg: any) => ({
           id: seg.id,
           content: seg.text,
         })),

@@ -4,6 +4,8 @@
  * React hook for conflict checking with React Query
  */
 
+'use client'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/hooks/use-toast'
 import {
