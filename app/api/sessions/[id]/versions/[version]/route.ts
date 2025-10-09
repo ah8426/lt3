@@ -74,16 +74,16 @@ export async function GET(
     }
 
     // Get single version
-    const version = await getVersion({
+    const versionData = await getVersion({
       sessionId,
       version: versionNumber,
     })
 
-    if (!version) {
+    if (!versionData) {
       return NextResponse.json({ error: 'Version not found' }, { status: 404 })
     }
 
-    return NextResponse.json(version)
+    return NextResponse.json(versionData)
   } catch (error) {
     console.error('Error fetching version:', error)
     return NextResponse.json(
