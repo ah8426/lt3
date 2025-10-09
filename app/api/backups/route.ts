@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createBackup, listBackups } from '@/lib/backup/backup-manager'
 import { getBackupSettings } from '@/lib/backup/backup-scheduler'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/prisma'
+import { prisma } from '@/lib/prisma'
 
 const createBackupSchema = z.object({
   scope: z.enum(['full', 'matter', 'session']).default('full'),

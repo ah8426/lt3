@@ -6,7 +6,7 @@ import {
 } from '@/lib/backup/backup-manager'
 import { restoreBackup, verifyBackup, getRestorePreview } from '@/lib/backup/backup-restore'
 import { z } from 'zod'
-import { prisma } from '@/lib/db/prisma'
+import { prisma } from '@/lib/prisma'
 
 const restoreBackupSchema = z.object({
   encryptionKey: z.string().optional(),

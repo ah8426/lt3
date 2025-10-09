@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db/prisma'
+import { prisma } from '@/lib/prisma'
 import { createClient } from '@/lib/supabase/server'
 import * as tar from 'tar-stream'
 import { createHash } from 'crypto'

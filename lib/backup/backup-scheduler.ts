@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/db/prisma'
+import { prisma } from '@/lib/prisma'
 import { createBackup, BackupOptions } from './backup-manager'
 
 export type BackupFrequency = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'disabled'
