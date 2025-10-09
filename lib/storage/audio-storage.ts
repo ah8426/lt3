@@ -72,7 +72,7 @@ export async function uploadAudio(
  */
 export async function getSignedUrl(
   filePath: string,
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient<any>,
   expiresIn: number = 3600 // 1 hour in seconds
 ): Promise<string> {
   const { data, error } = await supabase.storage
@@ -91,7 +91,7 @@ export async function getSignedUrl(
  */
 export async function deleteAudio(
   filePath: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<void> {
   const { error } = await supabase.storage.from(BUCKET_NAME).remove([filePath]);
 
@@ -105,7 +105,7 @@ export async function deleteAudio(
  */
 export async function getStorageQuota(
   userId: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<StorageQuota> {
   // List all files for user
   const { data: files, error } = await supabase.storage
@@ -134,7 +134,7 @@ export async function getStorageQuota(
  */
 export async function downloadAudio(
   filePath: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<Blob> {
   const { data, error } = await supabase.storage.from(BUCKET_NAME).download(filePath);
 
@@ -151,7 +151,7 @@ export async function downloadAudio(
 export async function copyAudio(
   sourcePath: string,
   destinationPath: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<void> {
   const { error } = await supabase.storage
     .from(BUCKET_NAME)
@@ -168,7 +168,7 @@ export async function copyAudio(
 export async function moveAudio(
   sourcePath: string,
   destinationPath: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<void> {
   const { error } = await supabase.storage
     .from(BUCKET_NAME)
@@ -184,7 +184,7 @@ export async function moveAudio(
  */
 export async function getAudioMetadata(
   filePath: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<{
   size: number;
   mimetype: string;
@@ -212,7 +212,7 @@ export async function getAudioMetadata(
  */
 export async function fileExists(
   filePath: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<boolean> {
   try {
     const { data, error } = await supabase.storage.from(BUCKET_NAME).list('', {
@@ -269,7 +269,7 @@ export function validateAudioFile(file: File): {
  */
 export async function batchDeleteAudio(
   filePaths: string[],
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<void> {
   const { error } = await supabase.storage.from(BUCKET_NAME).remove(filePaths);
 
@@ -283,7 +283,7 @@ export async function batchDeleteAudio(
  */
 export async function getUserAudioFiles(
   userId: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<
   Array<{
     name: string;

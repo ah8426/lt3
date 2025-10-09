@@ -48,6 +48,9 @@ const nextConfig: NextConfig = {
     'mammoth',
     'docxtemplater',
     'html-pdf-node',
+    'natural',
+    'mongoose',
+    'mongodb',
   ],
 
   // Image optimization for Core Web Vitals (LCP)
@@ -73,6 +76,19 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, isServer }) => {
     // Fix for Windows case-sensitivity issues
     config.resolve.symlinks = false
+
+    // Add polyfill for 'self' in server-side code
+    if (isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+      }
+      // Define 'self' as 'global' for server-side builds
+      config.plugins.push(
+        new (require('webpack').DefinePlugin)({
+          self: 'global',
+        })
+      )
+    }
 
     // Suppress specific warnings
     config.ignoreWarnings = [

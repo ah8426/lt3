@@ -97,6 +97,7 @@ export async function generateProof(
   // Store proof in database
   const proof = await prisma.timestampProof.create({
     data: {
+      sessionId,
       segmentId,
       contentHash,
       timestamp,
@@ -104,10 +105,6 @@ export async function generateProof(
       isVerified: timestampSource === 'ntp', // Auto-verify NTP timestamps
       verifiedAt: timestampSource === 'ntp' ? new Date() : undefined,
       verificationMethod: timestampSource === 'ntp' ? 'ntp_verified' : undefined,
-      // Store metadata
-      segment: {
-        connect: { id: segmentId },
-      },
     },
   })
 

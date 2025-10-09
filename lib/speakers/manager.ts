@@ -344,7 +344,7 @@ export async function getSpeakerStats(
   }, 0)
 
   const speakingTimeMs = segments.reduce((sum, seg) => {
-    return sum + (seg.endTime - seg.startTime)
+    return sum + (seg.endMs - seg.startMs)
   }, 0)
 
   const averageConfidence =
@@ -387,31 +387,31 @@ export async function autoDetectSpeakers(
   userId: string
 ): Promise<Speaker[]> {
   // Get all segments with speakers
-  const segments = await prisma.transcriptionSegment.findMany({
+  const segments = await prisma.transcriptSegment.findMany({
     where: {
       sessionId,
-      speaker: { not: null },
+      speakerId: { not: null },
     },
     select: {
+      speakerId: true,
       speaker: true,
     },
-    distinct: ['speaker'],
-    orderBy: { speaker: 'asc' },
   })
 
-  // Get unique speaker numbers
-  const speakerNumbers = segments
-    .map((s) => s.speaker)
-    .filter((n): n is number => n !== null)
+  // Get unique speaker IDs
+  const uniqueSpeakerIds = [...new Set(segments.map(s => s.speakerId).filter(Boolean))] as string[]
 
-  // Create speakers for each unique number
-  const speakers: Speaker[] = []
-  for (const speakerNumber of speakerNumbers) {
-    const speaker = await getOrCreateSpeaker(sessionId, speakerNumber, userId)
-    speakers.push(speaker)
+  // Get speakers by IDs
+  if (uniqueSpeakerIds.length === 0) {
+    return []
   }
 
-  return speakers as Speaker[]
+  return await prisma.speaker.findMany({
+    where: {
+      id: { in: uniqueSpeakerIds },
+    },
+    orderBy: { speakerNumber: 'asc' },
+  }) as Speaker[]
 }
 
 /**

@@ -7,6 +7,9 @@ import {
 } from '@/lib/conflicts/conflict-checker'
 import { z } from 'zod'
 
+// Force dynamic rendering to avoid natural library issues during static analysis
+export const dynamic = 'force-dynamic'
+
 const conflictCheckSchema = z.object({
   clientName: z.string().optional(),
   adverseParties: z.array(z.string()).optional(),

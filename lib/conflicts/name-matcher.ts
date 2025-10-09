@@ -4,6 +4,11 @@
  * Provides fuzzy matching and entity extraction for conflict detection
  */
 
+// Polyfill for natural library which expects browser 'self' global
+if (typeof globalThis.self === 'undefined') {
+  ;(globalThis as any).self = globalThis
+}
+
 import fuzzysort from 'fuzzysort'
 import natural from 'natural'
 

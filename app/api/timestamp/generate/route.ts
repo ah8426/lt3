@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
       // Verify all segments belong to user
       const unauthorizedSegment = segments.find(
-        (seg) => seg.session.userId !== user.id
+        (seg: any) => seg.session.userId !== user.id
       )
 
       if (unauthorizedSegment) {

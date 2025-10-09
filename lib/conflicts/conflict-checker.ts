@@ -4,6 +4,7 @@
  * Searches for potential conflicts across matters, clients, and adverse parties
  */
 
+import '@/lib/polyfills'
 import { prisma } from '@/lib/prisma'
 import {
   fuzzyMatch,

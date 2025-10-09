@@ -85,7 +85,7 @@ async function fetchFromServer(server: string): Promise<NTPResponse> {
     const packet = createNTPPacket()
     const requestTime = Date.now()
 
-    client.send(packet, 0, packet.length, NTP_PORT, server, (err: any) => {
+    client.send(packet as any, 0, packet.length, NTP_PORT, server, (err: any) => {
       if (err) {
         clearTimeout(timeout)
         client.close()

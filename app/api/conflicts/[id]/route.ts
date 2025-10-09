@@ -7,6 +7,9 @@ import {
 } from '@/lib/conflicts/conflict-checker'
 import { z } from 'zod'
 
+// Force dynamic rendering to avoid natural library issues during static analysis
+export const dynamic = 'force-dynamic'
+
 const updateResolutionSchema = z.object({
   status: z.enum(['pending', 'waived', 'declined', 'screened', 'cleared']),
   notes: z.string().optional(),
