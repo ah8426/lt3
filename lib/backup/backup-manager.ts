@@ -208,7 +208,7 @@ async function fetchBackupData(
     })
 
     if (matters.length > 0) {
-      data.matters = matters.map((m) => ({
+      data.matters = matters.map((m: (typeof matters)[number]) => ({
         ...m,
         sessions: undefined,
       }))

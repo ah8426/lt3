@@ -15,27 +15,9 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '2mb',
     },
     // Optimize package imports to reduce bundle size
+    // Note: Radix UI packages are excluded due to import errors with optimization
     optimizePackageImports: [
       'lucide-react',
-      '@radix-ui/react-accordion',
-      '@radix-ui/react-alert-dialog',
-      '@radix-ui/react-avatar',
-      '@radix-ui/react-checkbox',
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-label',
-      '@radix-ui/react-popover',
-      '@radix-ui/react-progress',
-      '@radix-ui/react-radio-group',
-      '@radix-ui/react-scroll-area',
-      '@radix-ui/react-select',
-      '@radix-ui/react-separator',
-      '@radix-ui/react-slider',
-      '@radix-ui/react-slot',
-      '@radix-ui/react-switch',
-      '@radix-ui/react-tabs',
-      '@radix-ui/react-toast',
-      '@radix-ui/react-tooltip',
       'date-fns',
     ],
   },
@@ -48,6 +30,17 @@ const nextConfig: NextConfig = {
     'mammoth',
     'docxtemplater',
     'html-pdf-node',
+    '@supabase/realtime-js',
+    '@supabase/supabase-js',
+    '@supabase/ssr',
+    '@deepgram/sdk',
+    '@deepgram/captions',
+    '@google-cloud/speech',
+    '@google-cloud/common',
+    'assemblyai',
+    'protobufjs',
+    'tar-stream',
+    'streamx',
   ],
 
   // Image optimization for Core Web Vitals (LCP)
@@ -73,19 +66,6 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, isServer }) => {
     // Fix for Windows case-sensitivity issues
     config.resolve.symlinks = false
-
-    // Add polyfill for 'self' in server-side code
-    if (isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-      }
-      // Define 'self' as 'global' for server-side builds
-      config.plugins.push(
-        new (require('webpack').DefinePlugin)({
-          self: 'global',
-        })
-      )
-    }
 
     // Suppress specific warnings
     config.ignoreWarnings = [
