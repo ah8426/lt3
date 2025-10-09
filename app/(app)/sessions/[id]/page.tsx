@@ -321,6 +321,7 @@ export default function SessionDetailPage() {
                     <TranscriptSegmentEditor
                       key={segment.id}
                       segment={segment}
+                      sessionId={sessionId}
                       onUpdate={async (segmentId, text, originalText) => {
                         await updateSegment(segmentId, { text }, originalText)
                       }}

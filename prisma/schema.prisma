@@ -1,7 +1,7 @@
 // prisma/schema.prisma
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
@@ -17,41 +17,41 @@ datasource db {
 // ============================================================================
 
 model User {
-  id              String    @id @db.Uuid
-  email           String    @unique
-  fullName        String?   @map("full_name")
-  avatarUrl       String?   @map("avatar_url")
-  provider        String?   // 'google' or 'microsoft'
-  providerId      String?   @map("provider_id")
-  firmId          String?   @map("firm_id") @db.Uuid
-  roles           String[]  @default(["user"])
+  id         String   @id @db.Uuid
+  email      String   @unique
+  fullName   String?  @map("full_name")
+  avatarUrl  String?  @map("avatar_url")
+  provider   String? // 'google' or 'microsoft'
+  providerId String?  @map("provider_id")
+  firmId     String?  @map("firm_id") @db.Uuid
+  roles      String[] @default(["user"])
 
   // Subscription
-  subscriptionTier    String   @default("free") @map("subscription_tier") // free, starter, professional, enterprise
-  subscriptionStatus  String   @default("active") @map("subscription_status") // active, trialing, past_due, canceled
-  stripeCustomerId    String?  @unique @map("stripe_customer_id")
-  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
-  subscriptionEndsAt  DateTime? @map("subscription_ends_at")
-  trialEndsAt         DateTime? @map("trial_ends_at")
+  subscriptionTier     String    @default("free") @map("subscription_tier") // free, starter, professional, enterprise
+  subscriptionStatus   String    @default("active") @map("subscription_status") // active, trialing, past_due, canceled
+  stripeCustomerId     String?   @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?   @unique @map("stripe_subscription_id")
+  subscriptionEndsAt   DateTime? @map("subscription_ends_at")
+  trialEndsAt          DateTime? @map("trial_ends_at")
 
   // User Settings (includes feature toggles)
-  settings        Json      @default("{}")
+  settings Json @default("{}")
 
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  lastLoginAt DateTime? @map("last_login_at")
 
   // Relations
-  matters         Matter[]
-  sessions        Session[]
-  apiKeys         EncryptedApiKey[]
-  auditLogs       AuditLog[]
-  exportJobs      ExportJob[]
-  conflictChecks  ConflictCheck[]
-  billableTime    BillableTime[]
-  templates       DocumentTemplate[]
-  generatedDocs   GeneratedDocument[]
-  aiUsage         ai_usage[]
+  matters        Matter[]
+  sessions       Session[]
+  apiKeys        EncryptedApiKey[]
+  auditLogs      AuditLog[]
+  exportJobs     ExportJob[]
+  conflictChecks ConflictCheck[]
+  billableTime   BillableTime[]
+  templates      DocumentTemplate[]
+  generatedDocs  GeneratedDocument[]
+  aiUsage        ai_usage[]
 
   @@index([email])
   @@index([firmId])
@@ -60,20 +60,20 @@ model User {
 }
 
 model EncryptedApiKey {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id") @db.Uuid
-  provider        String   // 'deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'
-  encryptedKey    String   @map("encrypted_key") @db.Text // Format: version:nonce:ciphertext
-  maskedKey       String?  @map("masked_key") // For display: "sk-12••••••3456"
-  isActive        Boolean  @default(true) @map("is_active")
-  lastTestedAt    DateTime? @map("last_tested_at")
-  testStatus      String?  @map("test_status") // 'success', 'failed', 'pending'
-  testError       String?  @map("test_error") @db.Text
-  createdAt       DateTime @default(now()) @map("created_at")
-  lastUsedAt      DateTime? @map("last_used_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id           String    @id @default(cuid())
+  userId       String    @map("user_id") @db.Uuid
+  provider     String // 'deepgram', 'assemblyai', 'anthropic', 'openai', 'google', 'openrouter'
+  encryptedKey String    @map("encrypted_key") @db.Text // Format: version:nonce:ciphertext
+  maskedKey    String?   @map("masked_key") // For display: "sk-12••••••3456"
+  isActive     Boolean   @default(true) @map("is_active")
+  lastTestedAt DateTime? @map("last_tested_at")
+  testStatus   String?   @map("test_status") // 'success', 'failed', 'pending'
+  testError    String?   @map("test_error") @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastUsedAt   DateTime? @map("last_used_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
   @@index([userId, isActive])
@@ -85,59 +85,59 @@ model EncryptedApiKey {
 // ============================================================================
 
 model SubscriptionPlan {
-  id              String   @id @default(cuid())
-  name            String   @unique // "Free", "Starter", "Professional", "Enterprise"
-  slug            String   @unique // "free", "starter", "professional", "enterprise"
-  description     String?  @db.Text
+  id          String  @id @default(cuid())
+  name        String  @unique // "Free", "Starter", "Professional", "Enterprise"
+  slug        String  @unique // "free", "starter", "professional", "enterprise"
+  description String? @db.Text
 
   // Pricing
-  priceMonthly    Int      // Cents (e.g., 2900 = $29.00)
-  priceYearly     Int      // Cents with discount
-  stripePriceIdMonthly  String?
-  stripePriceIdYearly   String?
+  priceMonthly         Int // Cents (e.g., 2900 = $29.00)
+  priceYearly          Int // Cents with discount
+  stripePriceIdMonthly String?
+  stripePriceIdYearly  String?
 
   // Limits
-  maxSessions     Int      @default(-1) // -1 = unlimited
-  maxStorageGB    Int      @default(-1) // -1 = unlimited
-  maxAIRequests   Int      @default(-1) // Per month, -1 = unlimited
-  maxMatters      Int      @default(-1)
-  maxUsers        Int      @default(1)  // For firm accounts
+  maxSessions   Int @default(-1) // -1 = unlimited
+  maxStorageGB  Int @default(-1) // -1 = unlimited
+  maxAIRequests Int @default(-1) // Per month, -1 = unlimited
+  maxMatters    Int @default(-1)
+  maxUsers      Int @default(1) // For firm accounts
 
   // Features (JSON for flexibility)
-  features        Json     @default("{}")
+  features Json @default("{}")
 
-  isActive        Boolean  @default(true)
-  sortOrder       Int      @default(0)
+  isActive  Boolean @default(true)
+  sortOrder Int     @default(0)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive, sortOrder])
   @@map("subscription_plans")
 }
 
 model Invoice {
-  id              String   @id @default(cuid())
-  userId          String   @db.Uuid
-  stripeInvoiceId String   @unique
+  id              String @id @default(cuid())
+  userId          String @db.Uuid
+  stripeInvoiceId String @unique
 
   // Invoice details
-  amountDue       Int      // Cents
-  amountPaid      Int      // Cents
-  currency        String   @default("usd")
-  status          String   // draft, open, paid, void, uncollectible
+  amountDue  Int // Cents
+  amountPaid Int // Cents
+  currency   String @default("usd")
+  status     String // draft, open, paid, void, uncollectible
 
   // Dates
-  periodStart     DateTime
-  periodEnd       DateTime
-  dueDate         DateTime?
-  paidAt          DateTime?
+  periodStart DateTime
+  periodEnd   DateTime
+  dueDate     DateTime?
+  paidAt      DateTime?
 
   // Files
-  invoicePdf      String?
-  hostedUrl       String?
+  invoicePdf String?
+  hostedUrl  String?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([status])
@@ -145,26 +145,26 @@ model Invoice {
 }
 
 model UsageMetrics {
-  id              String   @id @default(cuid())
-  userId          String   @db.Uuid
+  id     String @id @default(cuid())
+  userId String @db.Uuid
 
   // Period
-  periodStart     DateTime
-  periodEnd       DateTime
+  periodStart DateTime
+  periodEnd   DateTime
 
   // Metrics
-  sessionsCount   Int      @default(0)
+  sessionsCount        Int   @default(0)
   transcriptionMinutes Float @default(0)
-  aiRequestsCount Int      @default(0)
-  storageUsedGB   Float    @default(0)
+  aiRequestsCount      Int   @default(0)
+  storageUsedGB        Float @default(0)
 
   // Costs
-  transcriptionCost Float  @default(0)
-  aiCost          Float    @default(0)
-  storageCost     Float    @default(0)
-  totalCost       Float    @default(0)
+  transcriptionCost Float @default(0)
+  aiCost            Float @default(0)
+  storageCost       Float @default(0)
+  totalCost         Float @default(0)
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([userId, periodStart])
   @@index([userId, periodEnd])
@@ -176,22 +176,22 @@ model UsageMetrics {
 // ============================================================================
 
 model Matter {
-  id              String   @id @default(cuid())
-  name            String
-  clientName      String   @map("client_name")
-  adverseParty    String?  @map("adverse_party")
-  jurisdiction    String?
-  courtType       String?  @map("court_type")
-  caseNumber      String?  @map("case_number")
-  status          String   @default("active")
-  userId          String   @map("user_id") @db.Uuid
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  name         String
+  clientName   String   @map("client_name")
+  adverseParty String?  @map("adverse_party")
+  jurisdiction String?
+  courtType    String?  @map("court_type")
+  caseNumber   String?  @map("case_number")
+  status       String   @default("active")
+  userId       String   @map("user_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessions        Session[]
-  documents       GeneratedDocument[]
-  billableTime    BillableTime[]
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions     Session[]
+  documents    GeneratedDocument[]
+  billableTime BillableTime[]
 
   @@index([userId, status])
   @@index([clientName])
@@ -199,46 +199,46 @@ model Matter {
 }
 
 model Session {
-  id                    String    @id @default(cuid())
-  matterId              String    @map("matter_id")
-  userId                String    @map("user_id") @db.Uuid
+  id       String @id @default(cuid())
+  matterId String @map("matter_id")
+  userId   String @map("user_id") @db.Uuid
 
-  status                String    @default("active")
-  title                 String?
-  description           String?   @db.Text
+  status      String  @default("active")
+  title       String?
+  description String? @db.Text
 
-  startedAt             DateTime  @default(now()) @map("started_at")
-  endedAt               DateTime? @map("ended_at")
-  durationMs            Int?      @map("duration_ms")
+  startedAt  DateTime  @default(now()) @map("started_at")
+  endedAt    DateTime? @map("ended_at")
+  durationMs Int?      @map("duration_ms")
 
-  audioStoragePath      String?   @map("audio_storage_path")
-  transcriptData        Json?     @map("transcript_data")
+  audioStoragePath String? @map("audio_storage_path")
+  transcriptData   Json?   @map("transcript_data")
 
-  shareToken            String?   @unique @map("share_token")
-  shareExpiresAt        DateTime? @map("share_expires_at")
-  shareScope            String?   @map("share_scope")
+  shareToken     String?   @unique @map("share_token")
+  shareExpiresAt DateTime? @map("share_expires_at")
+  shareScope     String?   @map("share_scope")
 
-  totalCost             Float     @default(0) @map("total_cost")
-  asrProvider           String?   @map("asr_provider")
-  asrCost               Float     @default(0) @map("asr_cost")
-  aiProvider            String?   @map("ai_provider")
-  aiCost                Float     @default(0) @map("ai_cost")
+  totalCost   Float   @default(0) @map("total_cost")
+  asrProvider String? @map("asr_provider")
+  asrCost     Float   @default(0) @map("asr_cost")
+  aiProvider  String? @map("ai_provider")
+  aiCost      Float   @default(0) @map("ai_cost")
 
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  matter                Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  segments              TranscriptSegment[]
-  chatMessages          ChatMessage[]
-  versions              TranscriptVersion[]
-  accessLogs            TranscriptAccessLog[]
-  redactions            Redaction[]
-  speakers              Speaker[]
-  timestampProofs       TimestampProof[]
-  exportJobs            ExportJob[]
-  billableTime          BillableTime[]
-  generatedDocs         GeneratedDocument[]
+  matter          Matter                @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  segments        TranscriptSegment[]
+  chatMessages    ChatMessage[]
+  versions        TranscriptVersion[]
+  accessLogs      TranscriptAccessLog[]
+  redactions      Redaction[]
+  speakers        Speaker[]
+  timestampProofs TimestampProof[]
+  exportJobs      ExportJob[]
+  billableTime    BillableTime[]
+  generatedDocs   GeneratedDocument[]
 
   @@index([userId, status, startedAt])
   @@index([matterId, startedAt])
@@ -251,32 +251,32 @@ model Session {
 // ============================================================================
 
 model AuditLog {
-  id              String    @id @default(cuid())
-  userId          String?   @map("user_id") @db.Uuid
-  sessionId       String?   @map("session_id")
-  matterId        String?   @map("matter_id")
+  id        String  @id @default(cuid())
+  userId    String? @map("user_id") @db.Uuid
+  sessionId String? @map("session_id")
+  matterId  String? @map("matter_id")
 
-  action          String
-  resource        String
-  resourceId      String?   @map("resource_id")
+  action     String
+  resource   String
+  resourceId String? @map("resource_id")
 
-  clientName      String?   @map("client_name")
+  clientName String? @map("client_name")
 
-  oldValue        Json?     @map("old_value")
-  newValue        Json?     @map("new_value")
-  changeReason    String?   @map("change_reason")
+  oldValue     Json?   @map("old_value")
+  newValue     Json?   @map("new_value")
+  changeReason String? @map("change_reason")
 
-  ipAddress       String?   @map("ip_address")
-  userAgent       String?   @map("user_agent")
-  location        String?
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+  location  String?
 
-  retentionUntil  DateTime? @map("retention_until")
-  isPrivileged    Boolean   @default(true) @map("is_privileged")
+  retentionUntil DateTime? @map("retention_until")
+  isPrivileged   Boolean   @default(true) @map("is_privileged")
 
-  metadata        Json      @default("{}")
-  createdAt       DateTime  @default(now()) @map("created_at")
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([sessionId, createdAt])
@@ -291,21 +291,21 @@ model AuditLog {
 // ============================================================================
 
 model TranscriptVersion {
-  id              String   @id @default(cuid())
-  sessionId       String   @map("session_id")
-  version         Int
+  id        String @id @default(cuid())
+  sessionId String @map("session_id")
+  version   Int
 
-  segments        Json
+  segments Json
 
-  changeType      String   @map("change_type")
-  changedBy       String   @map("changed_by")
-  changeReason    String?  @map("change_reason")
+  changeType   String  @map("change_type")
+  changedBy    String  @map("changed_by")
+  changeReason String? @map("change_reason")
 
-  diffSummary     Json?    @map("diff_summary")
+  diffSummary Json? @map("diff_summary")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, version])
   @@index([sessionId, createdAt])
@@ -318,25 +318,25 @@ model TranscriptVersion {
 // ============================================================================
 
 model TimestampProof {
-  id              String   @id @default(cuid())
-  sessionId       String   @map("session_id")
-  segmentId       String   @map("segment_id")
+  id        String @id @default(cuid())
+  sessionId String @map("session_id")
+  segmentId String @map("segment_id")
 
   contentHash     String   @map("content_hash")
   timestamp       DateTime
   timestampSource String   @map("timestamp_source")
 
-  rfc3161Token    String?  @map("rfc3161_token") @db.Text
+  rfc3161Token String? @map("rfc3161_token") @db.Text
 
-  isVerified      Boolean  @default(false) @map("is_verified")
-  verifiedAt      DateTime? @map("verified_at")
-  verifiedBy      String?  @map("verified_by")
-  verificationMethod String? @map("verification_method")
+  isVerified         Boolean   @default(false) @map("is_verified")
+  verifiedAt         DateTime? @map("verified_at")
+  verifiedBy         String?   @map("verified_by")
+  verificationMethod String?   @map("verification_method")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  segment         TranscriptSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  session Session           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  segment TranscriptSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
 
   @@unique([segmentId])
   @@index([sessionId, timestamp])
@@ -349,27 +349,29 @@ model TimestampProof {
 // ============================================================================
 
 model Speaker {
-  id              String   @id @default(cuid())
-  sessionId       String   @map("session_id")
+  id            String @id @default(cuid())
+  sessionId     String @map("session_id")
+  speakerNumber Int    @map("speaker_number")
 
-  name            String
-  role            String?
-  organization    String?
+  name         String
+  role         String?
+  organization String?
 
-  voiceprint      Json?
+  voiceprint Json?
 
-  firstSpoke      DateTime @map("first_spoke")
-  lastSpoke       DateTime @map("last_spoke")
-  totalDuration   Int      @map("total_duration")
-  segmentCount    Int      @map("segment_count")
-  wordCount       Int      @default(0) @map("word_count")
+  firstSpoke    DateTime @map("first_spoke")
+  lastSpoke     DateTime @map("last_spoke")
+  totalDuration Int      @map("total_duration")
+  segmentCount  Int      @map("segment_count")
+  wordCount     Int      @default(0) @map("word_count")
 
-  metadata        Json     @default("{}")
-  createdAt       DateTime @default(now()) @map("created_at")
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  segments        TranscriptSegment[]
+  session  Session             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  segments TranscriptSegment[]
 
+  @@unique([sessionId, speakerNumber], map: "speakers_session_number_unique")
   @@map("speakers")
 }
 
@@ -378,35 +380,35 @@ model Speaker {
 // ============================================================================
 
 model Redaction {
-  id                  String   @id @default(cuid())
-  sessionId           String   @map("session_id")
-  segmentId           String?  @map("segment_id")
+  id        String  @id @default(cuid())
+  sessionId String  @map("session_id")
+  segmentId String? @map("segment_id")
 
   // Encrypted original text
-  encryptedOriginal   String   @map("encrypted_original")
-  encryptionNonce     String   @map("encryption_nonce")
+  encryptedOriginal String @map("encrypted_original")
+  encryptionNonce   String @map("encryption_nonce")
 
   // Redacted representation
-  redactedText        String   @map("redacted_text")
-  piiType             String   @map("pii_type") // ssn, credit_card, etc.
+  redactedText String @map("redacted_text")
+  piiType      String @map("pii_type") // ssn, credit_card, etc.
 
   // Position in text
-  startOffset         Int      @map("start_offset")
-  endOffset           Int      @map("end_offset")
+  startOffset Int @map("start_offset")
+  endOffset   Int @map("end_offset")
 
   // Metadata
-  reason              String?
-  legalBasis          String?  @map("legal_basis")
+  reason     String?
+  legalBasis String? @map("legal_basis")
 
   // Access control
-  createdBy           String   @map("created_by")
-  accessControl       Json     @default("[]") @map("access_control") // Array of user IDs
+  createdBy     String @map("created_by")
+  accessControl Json   @default("[]") @map("access_control") // Array of user IDs
 
-  createdAt           DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  session             Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  segment             TranscriptSegment? @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  session Session            @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  segment TranscriptSegment? @relation(fields: [segmentId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([segmentId])
@@ -419,28 +421,28 @@ model Redaction {
 // ============================================================================
 
 model TranscriptSegment {
-  id              String   @id @default(cuid())
-  sessionId       String   @map("session_id")
+  id        String @id @default(cuid())
+  sessionId String @map("session_id")
 
-  startMs         Int      @map("start_ms")
-  endMs           Int      @map("end_ms")
+  startMs Int @map("start_ms")
+  endMs   Int @map("end_ms")
 
-  text            String   @db.Text
+  text String @db.Text
 
-  speakerId       String?  @map("speaker_id")
-  speakerName     String?  @map("speaker_name")
+  speakerId   String? @map("speaker_id")
+  speakerName String? @map("speaker_name")
 
-  confidence      Float?
-  provider        String?
+  confidence Float?
+  provider   String?
 
-  isFinal         Boolean  @default(false) @map("is_final")
-  isEdited        Boolean  @default(false) @map("is_edited")
-  editedBy        String?  @map("edited_by")
+  isFinal  Boolean @default(false) @map("is_final")
+  isEdited Boolean @default(false) @map("is_edited")
+  editedBy String? @map("edited_by")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  speaker         Speaker? @relation(fields: [speakerId], references: [id], onDelete: SetNull)
+  session         Session          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  speaker         Speaker?         @relation(fields: [speakerId], references: [id], onDelete: SetNull)
   timestampProofs TimestampProof[]
   redactions      Redaction[]
 
@@ -450,16 +452,16 @@ model TranscriptSegment {
 }
 
 model TranscriptAccessLog {
-  id              String   @id @default(cuid())
-  sessionId       String   @map("session_id")
-  userId          String?  @map("user_id") @db.Uuid
-  accessType      String   @map("access_type")
-  accessMethod    String   @map("access_method")
-  timestamp       DateTime @default(now())
-  ipAddress       String?  @map("ip_address")
-  userAgent       String?  @map("user_agent")
+  id           String   @id @default(cuid())
+  sessionId    String   @map("session_id")
+  userId       String?  @map("user_id") @db.Uuid
+  accessType   String   @map("access_type")
+  accessMethod String   @map("access_method")
+  timestamp    DateTime @default(now())
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
 
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, timestamp])
   @@index([userId, timestamp])
@@ -471,23 +473,23 @@ model TranscriptAccessLog {
 // ============================================================================
 
 model ChatMessage {
-  id              String   @id @default(cuid())
-  sessionId       String   @map("session_id")
+  id        String @id @default(cuid())
+  sessionId String @map("session_id")
 
-  role            String
-  content         String   @db.Text
+  role    String
+  content String @db.Text
 
-  provider        String?
-  model           String?
-  tokens          Int?
-  cost            Float?
+  provider String?
+  model    String?
+  tokens   Int?
+  cost     Float?
 
-  contextUsed     Json?    @map("context_used")
+  contextUsed Json? @map("context_used")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  citations       Citation[]
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  citations Citation[]
 
   @@index([sessionId, createdAt])
   @@map("chat_messages")
@@ -498,19 +500,19 @@ model ChatMessage {
 // ============================================================================
 
 model ai_usage {
-  id                  String   @id @db.Uuid @default(dbgenerated("gen_random_uuid()"))
-  user_id             String   @db.Uuid
-  provider            String
-  model               String
-  prompt_tokens       Int      @default(0)
-  completion_tokens   Int      @default(0)
-  total_tokens        Int      @default(0)
-  cost                Decimal  @default(0) @db.Decimal(10, 6)
-  purpose             String?
-  metadata            Json?
-  created_at          DateTime @default(now())
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String   @db.Uuid
+  provider          String
+  model             String
+  prompt_tokens     Int      @default(0)
+  completion_tokens Int      @default(0)
+  total_tokens      Int      @default(0)
+  cost              Decimal  @default(0) @db.Decimal(10, 6)
+  purpose           String?
+  metadata          Json?
+  created_at        DateTime @default(now())
 
-  user                User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id, created_at])
   @@index([provider, model])
@@ -522,42 +524,42 @@ model ai_usage {
 // ============================================================================
 
 model Citation {
-  id              String   @id @default(cuid())
-  chatMessageId   String?  @map("chat_message_id")
-  sessionId       String?  @map("session_id")
-  documentId      String?  @map("document_id")
+  id            String  @id @default(cuid())
+  chatMessageId String? @map("chat_message_id")
+  sessionId     String? @map("session_id")
+  documentId    String? @map("document_id")
 
-  citationType    String   @map("citation_type")
-  fullCitation    String   @map("full_citation") @db.Text
-  shortCitation   String?  @map("short_citation")
+  citationType  String  @map("citation_type")
+  fullCitation  String  @map("full_citation") @db.Text
+  shortCitation String? @map("short_citation")
 
-  jurisdiction    String?
-  statuteCode     String?  @map("statute_code")
-  section         String?
+  jurisdiction String?
+  statuteCode  String? @map("statute_code")
+  section      String?
 
-  caseName        String?  @map("case_name")
-  reporter        String?
-  volume          Int?
-  page            Int?
-  year            Int?
-  court           String?
+  caseName String? @map("case_name")
+  reporter String?
+  volume   Int?
+  page     Int?
+  year     Int?
+  court    String?
 
-  isVerified      Boolean  @default(false) @map("is_verified")
-  verificationStatus String? @map("verification_status")
-  verifiedAt      DateTime? @map("verified_at")
-  verifiedBy      String?  @map("verified_by")
-  verificationNotes String? @map("verification_notes") @db.Text
+  isVerified         Boolean   @default(false) @map("is_verified")
+  verificationStatus String?   @map("verification_status")
+  verifiedAt         DateTime? @map("verified_at")
+  verifiedBy         String?   @map("verified_by")
+  verificationNotes  String?   @map("verification_notes") @db.Text
 
-  treatmentStatus String?  @map("treatment_status")
-  treatmentNotes  String?  @map("treatment_notes") @db.Text
+  treatmentStatus String? @map("treatment_status")
+  treatmentNotes  String? @map("treatment_notes") @db.Text
 
-  westlawUrl      String?  @map("westlaw_url")
-  lexisUrl        String?  @map("lexis_url")
-  publicUrl       String?  @map("public_url")
+  westlawUrl String? @map("westlaw_url")
+  lexisUrl   String? @map("lexis_url")
+  publicUrl  String? @map("public_url")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  chatMessage     ChatMessage? @relation(fields: [chatMessageId], references: [id], onDelete: Cascade)
+  chatMessage ChatMessage? @relation(fields: [chatMessageId], references: [id], onDelete: Cascade)
 
   @@index([sessionId, citationType])
   @@index([jurisdiction, statuteCode, section])
@@ -570,35 +572,35 @@ model Citation {
 // ============================================================================
 
 model ExportJob {
-  id                      String   @id @default(cuid())
-  sessionId               String   @map("session_id")
-  userId                  String   @map("user_id") @db.Uuid
+  id        String @id @default(cuid())
+  sessionId String @map("session_id")
+  userId    String @map("user_id") @db.Uuid
 
-  format                  String
-  template                String?
+  format   String
+  template String?
 
-  includeLineNumbers      Boolean  @default(false) @map("include_line_numbers")
-  includeTimestamps       Boolean  @default(true) @map("include_timestamps")
-  includePageNumbers      Boolean  @default(true) @map("include_page_numbers")
-  includeCertification    Boolean  @default(false) @map("include_certification")
-  includeIndexPage        Boolean  @default(false) @map("include_index_page")
-  includeTableOfContents  Boolean  @default(false) @map("include_table_of_contents")
+  includeLineNumbers     Boolean @default(false) @map("include_line_numbers")
+  includeTimestamps      Boolean @default(true) @map("include_timestamps")
+  includePageNumbers     Boolean @default(true) @map("include_page_numbers")
+  includeCertification   Boolean @default(false) @map("include_certification")
+  includeIndexPage       Boolean @default(false) @map("include_index_page")
+  includeTableOfContents Boolean @default(false) @map("include_table_of_contents")
 
-  certifiedBy             String?  @map("certified_by")
-  certificationDate       DateTime? @map("certification_date")
-  certificationText       String?  @map("certification_text") @db.Text
-  barNumber               String?  @map("bar_number")
+  certifiedBy       String?   @map("certified_by")
+  certificationDate DateTime? @map("certification_date")
+  certificationText String?   @map("certification_text") @db.Text
+  barNumber         String?   @map("bar_number")
 
-  status                  String   @default("pending")
-  fileUrl                 String?  @map("file_url")
-  fileSize                Int?     @map("file_size")
+  status   String  @default("pending")
+  fileUrl  String? @map("file_url")
+  fileSize Int?    @map("file_size")
 
-  error                   String?  @db.Text
-  createdAt               DateTime @default(now()) @map("created_at")
-  completedAt             DateTime? @map("completed_at")
+  error       String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
 
-  session                 Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user                    User     @relation(fields: [userId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([sessionId])
@@ -607,29 +609,29 @@ model ExportJob {
 }
 
 model DocumentTemplate {
-  id              String   @id @default(cuid())
-  userId          String   @map("user_id") @db.Uuid
-  name            String
-  description     String?  @db.Text
+  id          String  @id @default(cuid())
+  userId      String  @map("user_id") @db.Uuid
+  name        String
+  description String? @db.Text
 
-  fileUrl         String   @map("file_url")
-  fields          Json
+  fileUrl String @map("file_url")
+  fields  Json
 
-  courtType       String?  @map("court_type")
-  documentType    String?  @map("document_type")
-  jurisdiction    String?
+  courtType    String? @map("court_type")
+  documentType String? @map("document_type")
+  jurisdiction String?
 
-  useCount        Int      @default(0) @map("use_count")
-  lastUsed        DateTime? @map("last_used")
+  useCount Int       @default(0) @map("use_count")
+  lastUsed DateTime? @map("last_used")
 
-  isPublic        Boolean  @default(false) @map("is_public")
-  sharedWith      String[] @map("shared_with")
+  isPublic   Boolean  @default(false) @map("is_public")
+  sharedWith String[] @map("shared_with")
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  generatedDocs   GeneratedDocument[]
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  generatedDocs GeneratedDocument[]
 
   @@index([userId, documentType])
   @@index([isPublic, jurisdiction])
@@ -637,29 +639,29 @@ model DocumentTemplate {
 }
 
 model GeneratedDocument {
-  id              String   @id @default(cuid())
-  templateId      String   @map("template_id")
-  sessionId       String?  @map("session_id")
-  matterId        String   @map("matter_id")
-  userId          String   @map("user_id") @db.Uuid
+  id         String  @id @default(cuid())
+  templateId String  @map("template_id")
+  sessionId  String? @map("session_id")
+  matterId   String  @map("matter_id")
+  userId     String  @map("user_id") @db.Uuid
 
-  fileName        String   @map("file_name")
-  fileUrl         String   @map("file_url")
-  format          String
+  fileName String @map("file_name")
+  fileUrl  String @map("file_url")
+  format   String
 
-  fieldValues     Json     @map("field_values")
+  fieldValues Json @map("field_values")
 
-  version         Int      @default(1)
-  parentId        String?  @map("parent_id")
+  version  Int     @default(1)
+  parentId String? @map("parent_id")
 
-  status          String   @default("draft")
+  status String @default("draft")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  template        DocumentTemplate @relation(fields: [templateId], references: [id])
-  session         Session?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
-  matter          Matter    @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  user            User      @relation(fields: [userId], references: [id])
+  template DocumentTemplate @relation(fields: [templateId], references: [id])
+  session  Session?         @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  matter   Matter           @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id])
 
   @@index([matterId, createdAt])
   @@index([templateId])
@@ -672,43 +674,43 @@ model GeneratedDocument {
 // ============================================================================
 
 model ConflictCheck {
-  id                  String    @id @default(cuid())
-  userId              String    @db.Uuid
+  id     String @id @default(cuid())
+  userId String @db.Uuid
 
   // Check Parameters
-  clientName          String?
-  adverseParties      String[]
-  companyNames        String[]
-  matterDescription   String?   @db.Text
-  excludeMatterId     String?
+  clientName        String?
+  adverseParties    String[]
+  companyNames      String[]
+  matterDescription String?  @db.Text
+  excludeMatterId   String?
 
   // Results
-  conflicts           Json      // Array of ConflictMatch objects
-  riskLevel           String    // none, low, medium, high, critical
-  totalMatches        Int       @default(0)
-  highRiskCount       Int       @default(0)
-  mediumRiskCount     Int       @default(0)
-  lowRiskCount        Int       @default(0)
-  recommendation      String    // proceed, review, decline
-  summary             String    @db.Text
+  conflicts       Json // Array of ConflictMatch objects
+  riskLevel       String // none, low, medium, high, critical
+  totalMatches    Int    @default(0)
+  highRiskCount   Int    @default(0)
+  mediumRiskCount Int    @default(0)
+  lowRiskCount    Int    @default(0)
+  recommendation  String // proceed, review, decline
+  summary         String @db.Text
 
   // Resolution
-  status              String    @default("pending") // pending, waived, declined, screened, cleared
-  resolvedBy          String?
-  resolvedAt          DateTime?
-  resolutionNotes     String?   @db.Text
+  status          String    @default("pending") // pending, waived, declined, screened, cleared
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  resolutionNotes String?   @db.Text
 
   // Audit
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("conflict_checks")
   @@index([userId, createdAt])
   @@index([status, riskLevel])
   @@index([clientName])
+  @@map("conflict_checks")
 }
 
 // ============================================================================
@@ -716,29 +718,29 @@ model ConflictCheck {
 // ============================================================================
 
 model Backup {
-  id              String   @id @default(cuid())
-  userId          String?  @map("user_id") @db.Uuid
+  id     String  @id @default(cuid())
+  userId String? @map("user_id") @db.Uuid
 
-  type            String
-  scope           String
-  scopeId         String?  @map("scope_id")
+  type    String
+  scope   String
+  scopeId String? @map("scope_id")
 
-  size            Int
-  checksum        String
+  size     Int
+  checksum String
 
-  encryptedWith   String?  @map("encrypted_with")
-  includesAudio   Boolean  @default(false) @map("includes_audio")
+  encryptedWith     String? @map("encrypted_with")
+  includesAudio     Boolean @default(false) @map("includes_audio")
   includesDocuments Boolean @default(true) @map("includes_documents")
 
-  metadata        Json     @default("{}")
+  metadata Json @default("{}")
 
-  status          String   @default("pending")
-  error           String?  @db.Text
+  status String  @default("pending")
+  error  String? @db.Text
 
-  createdAt       DateTime @default(now()) @map("created_at")
-  completedAt     DateTime? @map("completed_at")
-  lastRestoredAt  DateTime? @map("last_restored_at")
-  restoreCount    Int      @default(0) @map("restore_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+  lastRestoredAt DateTime? @map("last_restored_at")
+  restoreCount   Int       @default(0) @map("restore_count")
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -750,31 +752,31 @@ model Backup {
 // ============================================================================
 
 model BillableTime {
-  id              String   @id @default(cuid())
-  sessionId       String   @map("session_id")
-  matterId        String   @map("matter_id")
-  userId          String   @map("user_id") @db.Uuid
+  id        String @id @default(cuid())
+  sessionId String @map("session_id")
+  matterId  String @map("matter_id")
+  userId    String @map("user_id") @db.Uuid
 
   startTime       DateTime @map("start_time")
   endTime         DateTime @map("end_time")
   durationSeconds Int      @map("duration_seconds")
   billableSeconds Int      @map("billable_seconds")
 
-  hourlyRate      Float    @map("hourly_rate")
-  amount          Float
+  hourlyRate Float @map("hourly_rate")
+  amount     Float
 
-  activityType    String   @map("activity_type")
-  description     String?  @db.Text
+  activityType String  @map("activity_type")
+  description  String? @db.Text
 
-  status          String   @default("draft")
-  invoiceId       String?  @map("invoice_id")
-  invoiceDate     DateTime? @map("invoice_date")
+  status      String    @default("draft")
+  invoiceId   String?   @map("invoice_id")
+  invoiceDate DateTime? @map("invoice_date")
 
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  matter          Matter   @relation(fields: [matterId], references: [id], onDelete: Cascade)
-  user            User     @relation(fields: [userId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  matter  Matter  @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
 
   @@index([matterId, createdAt])
   @@index([userId, status])
@@ -802,14 +804,14 @@ model FeatureFlag {
 }
 
 model SystemLog {
-  id              String   @id @default(cuid())
-  level           String
-  service         String
-  message         String   @db.Text
-  error           String?  @db.Text
-  stack           String?  @db.Text
-  metadata        Json     @default("{}")
-  timestamp       DateTime @default(now())
+  id        String   @id @default(cuid())
+  level     String
+  service   String
+  message   String   @db.Text
+  error     String?  @db.Text
+  stack     String?  @db.Text
+  metadata  Json     @default("{}")
+  timestamp DateTime @default(now())
 
   @@index([level, timestamp])
   @@index([service, timestamp])

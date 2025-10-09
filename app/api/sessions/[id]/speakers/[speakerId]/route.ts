@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import {
   updateSpeaker,
   deleteSpeaker,
@@ -41,7 +41,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -97,7 +97,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -168,7 +168,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -221,7 +221,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string; speakerId: string }> }
 ) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
     const {
       data: { user },
     } = await supabase.auth.getUser()

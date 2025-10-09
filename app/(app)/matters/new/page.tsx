@@ -87,10 +87,10 @@ export default function NewMatterPage() {
     const data: CreateMatterInput = {
       name: formData.name.trim(),
       clientName: formData.clientName.trim(),
-      adverseParty: formData.adverseParty?.trim() || null,
-      jurisdiction: formData.jurisdiction || null,
-      courtType: formData.courtType || null,
-      caseNumber: formData.caseNumber?.trim() || null,
+      adverseParty: formData.adverseParty?.trim() || undefined,
+      jurisdiction: formData.jurisdiction || undefined,
+      courtType: formData.courtType || undefined,
+      caseNumber: formData.caseNumber?.trim() || undefined,
     };
 
     // Run conflict check before creating matter

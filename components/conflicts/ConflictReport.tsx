@@ -5,13 +5,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, CheckCircle2, XCircle, AlertCircle, Info } from 'lucide-react'
-import { ConflictCheckResult, RiskLevel } from '@/lib/conflicts/conflict-checker'
+import { ConflictCheckResult, RiskLevel, ConflictStatus } from '@/lib/conflicts/conflict-checker'
 import { ConflictCard } from './ConflictCard'
 import { cn } from '@/lib/utils'
 
 interface ConflictReportProps {
   result: ConflictCheckResult
-  onResolve?: (status: 'waived' | 'declined' | 'cleared') => void
+  onResolve?: (status: ConflictStatus) => void | Promise<void>
   className?: string
 }
 
@@ -151,14 +151,14 @@ export function ConflictReport({ result, onResolve, className }: ConflictReportP
             <div className="flex flex-wrap gap-3">
               <Button
                 variant="destructive"
-                onClick={() => onResolve('declined')}
+                onClick={() => onResolve(ConflictStatus.DECLINED)}
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Decline Matter
               </Button>
               <Button
                 variant="outline"
-                onClick={() => onResolve('waived')}
+                onClick={() => onResolve(ConflictStatus.WAIVED)}
                 className="border-yellow-500 text-yellow-700 hover:bg-yellow-50"
               >
                 <AlertCircle className="h-4 w-4 mr-2" />
@@ -166,7 +166,7 @@ export function ConflictReport({ result, onResolve, className }: ConflictReportP
               </Button>
               <Button
                 variant="outline"
-                onClick={() => onResolve('cleared')}
+                onClick={() => onResolve(ConflictStatus.CLEARED)}
                 className="border-green-500 text-green-700 hover:bg-green-50"
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
