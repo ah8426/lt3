@@ -71,6 +71,9 @@ const nextConfig: NextConfig = {
 
   // Webpack configuration
   webpack: (config, { dev, isServer }) => {
+    // Fix for Windows case-sensitivity issues
+    config.resolve.symlinks = false
+
     // Externalize heavy server-only packages
     config.externals.push({
       'utf-8-validate': 'commonjs utf-8-validate',
