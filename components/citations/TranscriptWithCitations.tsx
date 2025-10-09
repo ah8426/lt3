@@ -179,7 +179,7 @@ export function TranscriptWithCitations({
             onVerifySingle={handleVerifyCitation}
             onExport={exportCitations}
             isVerifying={isVerifying}
-            verificationProgress={verificationProgress}
+            verificationProgress={verificationProgress || undefined}
           />
         </div>
       )}

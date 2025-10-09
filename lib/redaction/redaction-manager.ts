@@ -91,8 +91,8 @@ export function decryptOriginal(encrypted: string, nonce: string): string {
   const nonceBytes = Buffer.from(nonce, 'base64')
   const ciphertext = Buffer.from(encrypted, 'base64')
 
-  const cipher = xchacha20poly1305(key, nonceBytes)
-  const plaintext = cipher.decrypt(ciphertext)
+  const cipher = xchacha20poly1305(key, nonceBytes as any)
+  const plaintext = cipher.decrypt(ciphertext as any)
 
   return new TextDecoder().decode(plaintext)
 }

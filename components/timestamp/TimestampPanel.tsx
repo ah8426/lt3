@@ -281,7 +281,7 @@ export function TimestampPanel({
                     checked={allSelected}
                     ref={(el) => {
                       if (el) {
-                        el.indeterminate = someSelected
+                        (el as any).indeterminate = someSelected
                       }
                     }}
                     onCheckedChange={handleToggleAll}
@@ -320,7 +320,7 @@ export function TimestampPanel({
                               isVerified={proof.isVerified}
                               timestampSource={proof.timestampSource}
                               size="sm"
-                              variant="compact"
+                              variant="minimal"
                             />
                             {proof.isVerified && (
                               <Badge variant="outline" className="text-xs">

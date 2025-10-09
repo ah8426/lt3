@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const BUCKET_NAME = 'audio-recordings';
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
@@ -23,7 +23,7 @@ export async function uploadAudio(
   file: Blob | File,
   userId: string,
   sessionId: string,
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<any>
 ): Promise<UploadResult> {
   // Validate file size
   if (file.size > MAX_FILE_SIZE) {

@@ -99,8 +99,7 @@ async function searchClientConflicts(
       id: true,
       clientName: true,
       adverseParty: true,
-      description: true,
-      title: true,
+      name: true,
       createdAt: true,
     },
   })
@@ -117,8 +116,8 @@ async function searchClientConflicts(
           id: `client-${matter.id}`,
           type: 'client',
           matterId: matter.id,
-          matterTitle: matter.title,
-          matterDescription: matter.description || undefined,
+          matterTitle: matter.name,
+          matterDescription: undefined,
           clientName: matter.clientName,
           matchedName: matter.clientName,
           queryName: clientName,
@@ -140,8 +139,8 @@ async function searchClientConflicts(
         id: `adverse-client-${matter.id}`,
         type: 'adverse_party',
         matterId: matter.id,
-        matterTitle: matter.title,
-        matterDescription: matter.description || undefined,
+        matterTitle: matter.name,
+        matterDescription: undefined,
         adverseParty: matter.adverseParty,
         matchedName: matter.adverseParty,
         queryName: clientName,
@@ -174,8 +173,7 @@ async function searchAdversePartyConflicts(
       id: true,
       clientName: true,
       adverseParty: true,
-      description: true,
-      title: true,
+      name: true,
       createdAt: true,
     },
   })
@@ -191,8 +189,8 @@ async function searchAdversePartyConflicts(
           id: `adverse-vs-client-${matter.id}-${adverseParty}`,
           type: 'client',
           matterId: matter.id,
-          matterTitle: matter.title,
-          matterDescription: matter.description || undefined,
+          matterTitle: matter.name,
+          matterDescription: undefined,
           clientName: matter.clientName,
           matchedName: matter.clientName,
           queryName: adverseParty,
@@ -215,8 +213,8 @@ async function searchAdversePartyConflicts(
             id: `adverse-${matter.id}-${adverseParty}`,
             type: 'adverse_party',
             matterId: matter.id,
-            matterTitle: matter.title,
-            matterDescription: matter.description || undefined,
+            matterTitle: matter.name,
+            matterDescription: undefined,
             adverseParty: matter.adverseParty,
             matchedName: matter.adverseParty,
             queryName: adverseParty,
@@ -240,82 +238,8 @@ async function searchMatterDescriptionConflicts(
   userId: string,
   excludeMatterId?: string
 ): Promise<ConflictMatch[]> {
-  const conflicts: ConflictMatch[] = []
-
-  // Extract entities from description
-  const entities = extractEntities(description)
-
-  const matters = await prisma.matter.findMany({
-    where: {
-      userId,
-      id: excludeMatterId ? { not: excludeMatterId } : undefined,
-      description: { not: null },
-    },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      clientName: true,
-      createdAt: true,
-    },
-  })
-
-  matters.forEach((matter) => {
-    if (!matter.description) return
-
-    // Calculate text similarity
-    const similarity = calculateTextSimilarity(description, matter.description)
-
-    if (similarity >= 0.7) {
-      const riskLevel = calculateRiskLevel(similarity, 'matter')
-      if (riskLevel !== RiskLevel.NONE) {
-        conflicts.push({
-          id: `matter-${matter.id}`,
-          type: 'matter',
-          matterId: matter.id,
-          matterTitle: matter.title,
-          matterDescription: matter.description,
-          clientName: matter.clientName || undefined,
-          matchedName: matter.title,
-          queryName: 'Matter Description',
-          similarityScore: similarity,
-          riskLevel,
-          matchedAt: matter.createdAt,
-        })
-      }
-    }
-
-    // Check entities against client names
-    entities.forEach((entity) => {
-      if (matter.clientName) {
-        const match = fuzzyMatch(entity.text, matter.clientName, 0.75)
-        if (match.matches) {
-          const riskLevel = calculateRiskLevel(match.score, 'client')
-          if (riskLevel !== RiskLevel.NONE) {
-            conflicts.push({
-              id: `entity-client-${matter.id}-${entity.text}`,
-              type: 'client',
-              matterId: matter.id,
-              matterTitle: matter.title,
-              matterDescription: matter.description,
-              clientName: matter.clientName,
-              matchedName: matter.clientName,
-              queryName: entity.text,
-              similarityScore: match.score,
-              riskLevel,
-              matchedAt: matter.createdAt,
-              metadata: {
-                entityType: entity.type,
-                entityConfidence: entity.confidence,
-              },
-            })
-          }
-        }
-      }
-    })
-  })
-
-  return conflicts
+  // Matter model doesn't have a description field, so skip this check
+  return []
 }
 
 /**

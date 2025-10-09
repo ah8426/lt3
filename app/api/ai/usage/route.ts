@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     for (const record of records) {
-      stats.totalCost += record.cost
+      stats.totalCost += Number(record.cost)
       stats.totalTokens += record.total_tokens
       stats.totalPromptTokens += record.prompt_tokens
       stats.totalCompletionTokens += record.completion_tokens
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       if (!stats.byProvider[record.provider]) {
         stats.byProvider[record.provider] = { cost: 0, tokens: 0, requests: 0 }
       }
-      stats.byProvider[record.provider].cost += record.cost
+      stats.byProvider[record.provider].cost += Number(record.cost)
       stats.byProvider[record.provider].tokens += record.total_tokens
       stats.byProvider[record.provider].requests += 1
 
@@ -87,14 +87,14 @@ export async function GET(request: NextRequest) {
       if (!stats.byModel[record.model]) {
         stats.byModel[record.model] = { cost: 0, tokens: 0, requests: 0 }
       }
-      stats.byModel[record.model].cost += record.cost
+      stats.byModel[record.model].cost += Number(record.cost)
       stats.byModel[record.model].tokens += record.total_tokens
       stats.byModel[record.model].requests += 1
     }
 
     return NextResponse.json({
       stats,
-      records: records.map((r) => ({
+      records: records.map((r: any) => ({
         id: r.id,
         provider: r.provider,
         model: r.model,

@@ -204,10 +204,10 @@ export class GoogleSpeechProvider {
   /**
    * Parse Google timestamp to milliseconds
    */
-  private parseTime(time: { seconds: string; nanos: number } | undefined): number {
+  private parseTime(time: any): number {
     if (!time) return 0;
-    const seconds = parseInt(time.seconds || '0');
-    const nanos = time.nanos || 0;
+    const seconds = typeof time.seconds === 'string' ? parseInt(time.seconds) : Number(time.seconds || 0);
+    const nanos = Number(time.nanos || 0);
     return seconds * 1000 + nanos / 1000000;
   }
 
@@ -285,7 +285,7 @@ export class GoogleSpeechProvider {
                 currentConfidences.length;
               segments.push({
                 text: currentText.trim(),
-                speaker: currentSpeaker,
+                speaker: currentSpeaker ?? undefined,
                 confidence: avgConfidence,
                 startTime: currentStart,
                 endTime: this.parseTime(word.startTime),
@@ -294,11 +294,11 @@ export class GoogleSpeechProvider {
 
               // Start new segment
               currentSpeaker = word.speakerTag;
-              currentText = word.word;
+              currentText = word.word || '';
               currentStart = this.parseTime(word.startTime);
               currentConfidences = [word.confidence || 0.9];
             } else {
-              currentText += ' ' + word.word;
+              currentText += ' ' + (word.word || '');
               currentConfidences.push(word.confidence || 0.9);
             }
           }
@@ -310,7 +310,7 @@ export class GoogleSpeechProvider {
               currentConfidences.length;
             segments.push({
               text: currentText.trim(),
-              speaker: currentSpeaker,
+              speaker: currentSpeaker ?? undefined,
               confidence: avgConfidence,
               startTime: currentStart,
               endTime: this.parseTime(words[words.length - 1].endTime),
@@ -320,7 +320,7 @@ export class GoogleSpeechProvider {
         } else {
           // No words, just add the whole alternative
           segments.push({
-            text: alternative.transcript,
+            text: alternative.transcript || '',
             speaker: undefined,
             confidence: alternative.confidence || 0.9,
             startTime: 0,

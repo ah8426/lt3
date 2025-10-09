@@ -76,7 +76,7 @@ export async function createBackup(options: BackupOptions): Promise<{
     scope,
     scopeId,
     includesAudio: includeAudioFiles,
-    includesDocuments,
+    includesDocuments: includeDocuments,
     tables: Object.keys(data),
     recordCounts: Object.fromEntries(
       Object.entries(data).map(([table, records]) => [table, records.length])
@@ -90,7 +90,7 @@ export async function createBackup(options: BackupOptions): Promise<{
   const chunks: Buffer[] = []
 
   // Collect tar data
-  pack.on('data', (chunk) => {
+  pack.on('data', (chunk: any) => {
     chunks.push(Buffer.from(chunk))
   })
 
@@ -114,7 +114,7 @@ export async function createBackup(options: BackupOptions): Promise<{
   await new Promise((resolve) => pack.on('end', resolve))
 
   // Combine chunks
-  let backupBuffer = Buffer.concat(chunks)
+  let backupBuffer = Buffer.concat(chunks as any)
 
   // Encrypt if key provided
   if (encryptionKey) {
@@ -123,7 +123,7 @@ export async function createBackup(options: BackupOptions): Promise<{
   }
 
   // Calculate checksum
-  const checksum = createHash('sha256').update(backupBuffer).digest('hex')
+  const checksum = createHash('sha256').update(backupBuffer as any).digest('hex')
   const size = backupBuffer.length
 
   console.log(`[Backup] Backup size: ${(size / 1024 / 1024).toFixed(2)} MB`)
@@ -144,7 +144,7 @@ export async function createBackup(options: BackupOptions): Promise<{
     createdAt: new Date(),
     encryptedWith: encryptionKey ? 'aes-256-gcm' : undefined,
     includesAudio: includeAudioFiles,
-    includesDocuments,
+    includesDocuments: includeDocuments,
     version: BACKUP_VERSION,
   })
 
@@ -195,11 +195,10 @@ async function fetchBackupData(
       include: {
         sessions: {
           include: {
-            transcriptSegments: true,
+            segments: true,
             speakers: true,
             redactions: true,
             timestampProofs: true,
-            auditLogs: true,
             chatMessages: true,
           },
         },
@@ -223,15 +222,13 @@ async function fetchBackupData(
           speakers: undefined,
           redactions: undefined,
           timestampProofs: undefined,
-          auditLogs: undefined,
           chatMessages: undefined,
         }))
 
-        data.transcriptSegments = sessions.flatMap((s) => s.transcriptSegments)
+        data.transcriptSegments = sessions.flatMap((s) => s.segments)
         data.speakers = sessions.flatMap((s) => s.speakers)
         data.redactions = sessions.flatMap((s) => s.redactions)
         data.timestampProofs = sessions.flatMap((s) => s.timestampProofs)
-        data.auditLogs = sessions.flatMap((s) => s.auditLogs)
         data.chatMessages = sessions.flatMap((s) => s.chatMessages)
       }
 
@@ -266,11 +263,10 @@ async function fetchBackupData(
       include: {
         sessions: {
           include: {
-            transcriptSegments: true,
+            segments: true,
             speakers: true,
             redactions: true,
             timestampProofs: true,
-            auditLogs: true,
             chatMessages: true,
           },
         },
@@ -289,17 +285,15 @@ async function fetchBackupData(
           speakers: undefined,
           redactions: undefined,
           timestampProofs: undefined,
-          auditLogs: undefined,
           chatMessages: undefined,
         }))
 
         data.transcriptSegments = matter.sessions.flatMap(
-          (s) => s.transcriptSegments
+          (s) => s.segments
         )
         data.speakers = matter.sessions.flatMap((s) => s.speakers)
         data.redactions = matter.sessions.flatMap((s) => s.redactions)
         data.timestampProofs = matter.sessions.flatMap((s) => s.timestampProofs)
-        data.auditLogs = matter.sessions.flatMap((s) => s.auditLogs)
         data.chatMessages = matter.sessions.flatMap((s) => s.chatMessages)
       }
 
@@ -316,11 +310,10 @@ async function fetchBackupData(
     const session = await prisma.session.findFirst({
       where: { id: scopeId, userId },
       include: {
-        transcriptSegments: true,
+        segments: true,
         speakers: true,
         redactions: true,
         timestampProofs: true,
-        auditLogs: true,
         chatMessages: true,
         matter: true,
       },
@@ -334,7 +327,6 @@ async function fetchBackupData(
           speakers: undefined,
           redactions: undefined,
           timestampProofs: undefined,
-          auditLogs: undefined,
           chatMessages: undefined,
           matter: undefined,
         },
@@ -344,11 +336,10 @@ async function fetchBackupData(
         data.matters = [session.matter]
       }
 
-      data.transcriptSegments = session.transcriptSegments
+      data.transcriptSegments = session.segments
       data.speakers = session.speakers
       data.redactions = session.redactions
       data.timestampProofs = session.timestampProofs
-      data.auditLogs = session.auditLogs
       data.chatMessages = session.chatMessages
     }
   }

@@ -286,7 +286,7 @@ export function useTimestamp(options: UseTimestampOptions = {}): UseTimestampRet
   // Get proof by ID
   const getProofById = useCallback(
     (proofId: string) => {
-      return proofs.find((p) => p.id === proofId)
+      return proofs.find((p: any) => p.id === proofId)
     },
     [proofs]
   )

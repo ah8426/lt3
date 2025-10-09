@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { createBrowserClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 import { uploadAudio, getSignedUrl, deleteAudio } from '@/lib/storage/audio-storage';
 
 export interface Session {
@@ -55,7 +55,7 @@ export interface SegmentUpdate {
  */
 export function useSession(sessionId: string) {
   const queryClient = useQueryClient();
-  const supabase = createBrowserClient();
+  const supabase = createClient();
 
   // Fetch session details
   const {

@@ -71,7 +71,7 @@ export async function restoreBackup(
     // Verify checksum
     console.log('[Restore] Verifying checksum...')
     const calculatedChecksum = createHash('sha256')
-      .update(backupBuffer)
+      .update(backupBuffer as any)
       .digest('hex')
 
     if (calculatedChecksum !== backup.checksum) {
@@ -215,7 +215,7 @@ async function extractTarArchive(
       })
 
       stream.on('end', () => {
-        files.set(header.name, Buffer.concat(entryChunks))
+        files.set(header.name, Buffer.concat(entryChunks as any))
         next()
       })
 

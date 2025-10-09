@@ -115,7 +115,7 @@ export class AnthropicProvider implements AIProviderInterface {
       let fullContent = ''
       let toolCalls: AIToolCall[] = []
       let currentToolCall: Partial<AIToolCall> | null = null
-      let usage: Anthropic.Message['usage'] | undefined
+      let usage: Anthropic.Message['usage'] | Anthropic.MessageDeltaUsage | undefined
 
       for await (const event of stream) {
         if (event.type === 'content_block_start') {
@@ -337,10 +337,10 @@ export class AnthropicProvider implements AIProviderInterface {
    * Format usage information
    */
   private formatUsage(
-    usage: Anthropic.Message['usage'] | undefined,
+    usage: Anthropic.Message['usage'] | Anthropic.MessageDeltaUsage | undefined,
     model: string
   ): AIUsage {
-    const promptTokens = usage?.input_tokens ?? 0
+    const promptTokens = (usage && 'input_tokens' in usage) ? usage.input_tokens : 0
     const completionTokens = usage?.output_tokens ?? 0
     const totalTokens = promptTokens + completionTokens
 

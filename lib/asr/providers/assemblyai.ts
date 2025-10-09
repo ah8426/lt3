@@ -79,7 +79,7 @@ export class AssemblyAIProvider {
         }
       });
 
-      this.transcriber.on('transcript', (transcript: AssemblyAITranscript) => {
+      (this.transcriber as any).on('transcript', (transcript: AssemblyAITranscript) => {
         if (callbacks.onTranscript) {
           const segment = this.parseTranscriptData(transcript);
           if (segment) {

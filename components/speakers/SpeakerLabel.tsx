@@ -144,7 +144,7 @@ export function SpeakerLabel({
         <TooltipTrigger asChild>
           <button
             className={`rounded-full flex items-center justify-center text-white font-bold cursor-pointer hover:ring-2 hover:ring-offset-2 transition-all ${avatarSizes[size]} ${className}`}
-            style={{ backgroundColor: color, ringColor: color }}
+            style={{ backgroundColor: color, '--tw-ring-color': color } as React.CSSProperties}
             onClick={onClick}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}

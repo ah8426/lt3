@@ -47,7 +47,7 @@ export function checkBrowserCompatibility(): BrowserCompatibility {
     missingFeatures.push('getUserMedia');
   }
 
-  if (!window.MediaRecorder && !window.AudioContext && !window.webkitAudioContext) {
+  if (!window.MediaRecorder && !window.AudioContext && !(window as any).webkitAudioContext) {
     missingFeatures.push('MediaRecorder or AudioContext');
   }
 

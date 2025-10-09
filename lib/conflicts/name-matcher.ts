@@ -210,10 +210,10 @@ export function extractEntities(text: string): EntityMatch[] {
   const entities: EntityMatch[] = []
 
   // Tokenize sentences
-  const sentenceTokenizer = new SentenceTokenizer()
+  const sentenceTokenizer = new (SentenceTokenizer as any)()
   const sentences = sentenceTokenizer.tokenize(text)
 
-  sentences.forEach((sentence) => {
+  sentences.forEach((sentence: any) => {
     // Find capitalized sequences (potential names)
     const namePattern = /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b/g
     let match

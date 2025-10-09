@@ -135,7 +135,7 @@ export class OpenRouterProvider implements AIProviderInterface {
               toolCall = {
                 id: toolCallDelta.id,
                 name: toolCallDelta.function?.name,
-                arguments: {},
+                arguments: '' as any,
               }
               toolCallsMap.set(index, toolCall)
             }
@@ -145,7 +145,7 @@ export class OpenRouterProvider implements AIProviderInterface {
                 typeof toolCall.arguments === 'string'
                   ? toolCall.arguments
                   : JSON.stringify(toolCall.arguments || {})
-              toolCall.arguments = existingArgs + toolCallDelta.function.arguments
+              toolCall.arguments = (existingArgs + toolCallDelta.function.arguments) as any
             }
           }
         }
