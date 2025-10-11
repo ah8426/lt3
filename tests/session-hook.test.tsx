@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSession, useSessions, useCreateSession } from '@/hooks/useSession';
+import * as React from 'react';
 
 // Mock fetch
 const mockFetch = vi.fn();

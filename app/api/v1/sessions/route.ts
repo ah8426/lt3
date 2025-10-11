@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       const session = await sessionRepo.create({
         id: sessionId,
         user_id: user.id,
-        matter_id: matterId,
+        matter_id: matterId ?? undefined,
         title,
         transcript,
         audio_url: audioUrl,
