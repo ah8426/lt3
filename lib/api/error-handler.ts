@@ -2,14 +2,6 @@ import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 
-export interface APIError {
-  error: string;
-  message?: string;
-  details?: any;
-  code?: string;
-  version?: string;
-}
-
 export class APIError extends Error {
   public statusCode: number;
   public code?: string;

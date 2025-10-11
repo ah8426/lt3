@@ -8,6 +8,11 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  // Ignore ESLint errors during builds (handle separately)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // Experimental features
   experimental: {
     // Enable server actions

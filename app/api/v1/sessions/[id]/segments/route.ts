@@ -30,7 +30,7 @@ const DeleteSegmentSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const sessionRepo = new SessionRepository();
   const supabase = await createClient();
@@ -44,7 +44,7 @@ export async function GET(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
 
     // Get segments using repository
     const segments = await sessionRepo.getSegments(sessionId, user.id);
@@ -61,7 +61,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const sessionRepo = new SessionRepository();
   const supabase = await createClient();
@@ -75,7 +75,7 @@ export async function PATCH(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
     const body = await request.json();
 
     // Validate request body
@@ -114,7 +114,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const sessionRepo = new SessionRepository();
   const supabase = await createClient();
@@ -128,7 +128,7 @@ export async function DELETE(
   }
 
   try {
-    const sessionId = params.id;
+    const { id: sessionId } = await params;
     const url = new URL(request.url);
     const segmentId = url.searchParams.get('segment_id');
 

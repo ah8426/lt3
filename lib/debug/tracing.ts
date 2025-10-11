@@ -47,7 +47,7 @@ export class LT3TracingSystem {
       // Initialize SDK with custom instrumentations
       this.sdk = new NodeSDK({
         resource,
-        spanProcessor,
+        spanProcessor: spanProcessor as any, // Type compatibility fix for OpenTelemetry versions
         instrumentations: [
           getNodeAutoInstrumentations({
             // Disable noisy instrumentations
@@ -59,16 +59,18 @@ export class LT3TracingSystem {
             '@opentelemetry/instrumentation-http': {
               enabled: true,
               requestHook: (span, request) => {
+                const headers = (request as any).headers || {};
                 span.setAttributes({
-                  'lt3.request.size': request.headers['content-length'] || 0,
-                  'lt3.request.user_agent': request.headers['user-agent'] || 'unknown',
-                  'lt3.request.origin': request.headers.origin || 'direct',
+                  'lt3.request.size': headers['content-length'] || 0,
+                  'lt3.request.user_agent': headers['user-agent'] || 'unknown',
+                  'lt3.request.origin': headers.origin || 'direct',
                 });
               },
               responseHook: (span, response) => {
+                const headers = (response as any).headers || {};
                 span.setAttributes({
-                  'lt3.response.size': response.headers['content-length'] || 0,
-                  'lt3.response.content_type': response.headers['content-type'] || 'unknown',
+                  'lt3.response.size': headers['content-length'] || 0,
+                  'lt3.response.content_type': headers['content-type'] || 'unknown',
                 });
               },
             },
@@ -120,10 +122,7 @@ export class LT3TracingSystem {
     const jaegerEndpoint = process.env.JAEGER_ENDPOINT || 'http://localhost:14268/api/traces';
     const jaegerExporter = new JaegerExporter({
       endpoint: jaegerEndpoint,
-      tags: {
-        'lt3.deployment': env.NODE_ENV,
-        'lt3.version': process.env.npm_package_version || '1.0.0',
-      },
+      // tags field removed as it doesn't accept custom tags in newer versions
     });
 
     return new BatchSpanProcessor(jaegerExporter, {

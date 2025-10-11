@@ -92,7 +92,9 @@ export async function updateSession(request: NextRequest) {
     redirectResponse.headers.set('x-redirect-count', String(redirectCount + 1))
 
     // Copy cookies from supabaseResponse to maintain session
-    redirectResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value)
+    })
 
     return redirectResponse
   }
@@ -115,7 +117,9 @@ export async function updateSession(request: NextRequest) {
     redirectResponse.headers.set('x-redirect-count', String(redirectCount + 1))
 
     // Copy cookies from supabaseResponse to maintain session
-    redirectResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+    supabaseResponse.cookies.getAll().forEach(cookie => {
+      redirectResponse.cookies.set(cookie.name, cookie.value)
+    })
 
     return redirectResponse
   }

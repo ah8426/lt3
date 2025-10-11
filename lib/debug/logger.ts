@@ -20,8 +20,8 @@ export class LT3Logger {
     const isDevelopment = process.env.NODE_ENV === 'development';
 
     // Create custom format
-    const lt3Format = winston.format.printf(({ timestamp, level, message, service, traceId, ...meta }) => {
-      const traceInfo = traceId ? `[${traceId.substring(0, 8)}]` : '[no-trace]';
+    const lt3Format = winston.format.printf(({ timestamp, level, message, service, traceId, ...meta }: any) => {
+      const traceInfo = traceId ? `[${(traceId as string).substring(0, 8)}]` : '[no-trace]';
       const metaString = Object.keys(meta).length ? `\n${JSON.stringify(meta, null, 2)}` : '';
 
       if (isDevelopment) {
@@ -216,7 +216,7 @@ export class LT3Logger {
   apiRoute(method: string, path: string, statusCode: number, duration: number, meta: Record<string, any> = {}): void {
     const level = statusCode >= 400 ? 'error' : statusCode >= 300 ? 'warn' : 'info';
 
-    this.logger[level](`API: ${method} ${path} - ${statusCode} (${duration}ms)`, this.getLogMeta({
+    (this.logger as any)[level](`API: ${method} ${path} - ${statusCode} (${duration}ms)`, this.getLogMeta({
       ...meta,
       component: 'api',
       method,
@@ -256,7 +256,7 @@ export class LT3Logger {
    */
   encryption(operation: string, success: boolean, meta: Record<string, any> = {}): void {
     const level = success ? 'debug' : 'error';
-    this.logger[level](`Encryption: ${operation} - ${success ? 'success' : 'failed'}`, this.getLogMeta({
+    (this.logger as any)[level](`Encryption: ${operation} - ${success ? 'success' : 'failed'}`, this.getLogMeta({
       ...meta,
       component: 'encryption',
       operation,
@@ -330,7 +330,7 @@ export class LT3Logger {
    * Log security events
    */
   security(event: string, severity: 'low' | 'medium' | 'high' | 'critical', meta: Record<string, any> = {}): void {
-    const levelMap = {
+    const levelMap: Record<string, 'info' | 'warn' | 'error'> = {
       low: 'info',
       medium: 'warn',
       high: 'error',
@@ -339,7 +339,7 @@ export class LT3Logger {
 
     const level = levelMap[severity];
 
-    this.logger[level](`Security: ${event} (${severity})`, this.getLogMeta({
+    (this.logger as any)[level](`Security: ${event} (${severity})`, this.getLogMeta({
       ...meta,
       component: 'security',
       event,
@@ -376,12 +376,14 @@ export const dbLogger = new LT3Logger('lt3-db');
 export const authLogger = new LT3Logger('lt3-auth');
 
 // Debug logging utility functions
+const defaultLogger = logger;
+
 export const debug = {
   /**
    * Log object with pretty formatting
    */
-  object(label: string, obj: any, logger = debug.logger): void {
-    logger.debug(`${label}:`, {
+  object(label: string, obj: any, loggerInstance: LT3Logger = defaultLogger): void {
+    loggerInstance.debug(`${label}:`, {
       object: JSON.stringify(obj, null, 2),
     });
   },
@@ -389,15 +391,15 @@ export const debug = {
   /**
    * Log function entry and exit
    */
-  fn(name: string, args: any[] = [], logger = debug.logger) {
-    logger.debug(`→ ${name}()`, { args });
+  fn(name: string, args: any[] = [], loggerInstance: LT3Logger = defaultLogger) {
+    loggerInstance.debug(`→ ${name}()`, { args });
 
     return {
       exit: (result?: any) => {
-        logger.debug(`← ${name}()`, { result });
+        loggerInstance.debug(`← ${name}()`, { result });
       },
       error: (error: Error) => {
-        logger.error(`✗ ${name}() failed`, { error: error.message, stack: error.stack });
+        loggerInstance.error(`✗ ${name}() failed`, { error: error.message, stack: error.stack });
       },
     };
   },
@@ -405,7 +407,7 @@ export const debug = {
   /**
    * Default logger for debug utilities
    */
-  logger,
+  logger: defaultLogger,
 };
 
 export default logger;
