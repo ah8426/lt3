@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
-import { prisma } from '@/lib/server/db';
+import { prisma } from '@/lib/prisma';
 import { decryptAPIKey } from '@/lib/server/encryption/key-manager';
 
 // ============================================================================
@@ -46,8 +46,17 @@ export async function GET(
       );
     }
 
-    // Decrypt the API key
-    const decryptedKey = await decryptAPIKey(apiKey.encryptedKey, user.id);
+    // Decrypt the API key with error handling
+    let decryptedKey: string;
+    try {
+      decryptedKey = await decryptAPIKey(apiKey.encryptedKey, user.id);
+    } catch (decryptError) {
+      console.error('Decryption error:', decryptError);
+      return NextResponse.json(
+        { error: 'Failed to decrypt API key. The key may be corrupted or the encryption key may have changed.' },
+        { status: 500 }
+      );
+    }
 
     // Update last used timestamp
     await prisma.encryptedApiKey.update({

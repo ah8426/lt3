@@ -29,56 +29,70 @@ export class AIProviderManager {
   private failoverConfig?: AIFailoverConfig
   private onUsageRecord?: (record: AIUsageRecord) => Promise<void>
   private usageRecords: AIUsageRecord[] = []
+  private readonly MAX_USAGE_RECORDS = 1000; // Prevent memory leak
 
   constructor(config: ProviderManagerConfig) {
     this.failoverConfig = config.failover
     this.onUsageRecord = config.onUsageRecord
 
-    // Initialize providers
+    // Initialize providers with error tracking
+    const errors: string[] = [];
     for (const [provider, providerConfig] of config.providers) {
-      this.initializeProvider(provider, providerConfig)
+      try {
+        this.initializeProvider(provider, providerConfig)
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        errors.push(`Failed to initialize ${provider}: ${errorMsg}`);
+        console.error(`✗ Failed to initialize AI provider ${provider}:`, error);
+      }
     }
+
+    if (this.providers.size === 0) {
+      throw new Error(
+        'No AI providers could be initialized. Errors:\n' + errors.join('\n')
+      );
+    }
+
+    if (errors.length > 0) {
+      console.warn(
+        `⚠️  Some AI providers failed to initialize:\n${errors.join('\n')}`
+      );
+    }
+
+    console.log(`✓ Initialized ${this.providers.size} AI provider(s)`);
   }
 
   /**
    * Initialize a provider
    */
   private initializeProvider(provider: AIProvider, config: AIProviderConfig): void {
-    try {
-      let providerInstance: AIProviderInterface
+    let providerInstance: AIProviderInterface
 
-      switch (provider) {
-        case 'anthropic':
-          providerInstance = new AnthropicProvider(config)
-          break
-        case 'openai':
-          providerInstance = new OpenAIProvider(config)
-          break
-        case 'google':
-          providerInstance = new GoogleProvider(config)
-          break
-        case 'openrouter':
-          providerInstance = new OpenRouterProvider(config)
-          break
-        default:
-          throw new Error(`Unknown provider: ${provider}`)
-      }
-
-      this.providers.set(provider, providerInstance)
-      this.providerStatus.set(provider, {
-        provider,
-        available: true,
-        lastChecked: new Date(),
-      })
-    } catch (error) {
-      console.error(`Failed to initialize provider ${provider}:`, error)
-      this.providerStatus.set(provider, {
-        provider,
-        available: false,
-        lastChecked: new Date(),
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
+    switch (provider) {
+      case 'anthropic':
+        providerInstance = new AnthropicProvider(config)
+        break
+      case 'openai':
+        providerInstance = new OpenAIProvider(config)
+        break
+      case 'google':
+        providerInstance = new GoogleProvider(config)
+        break
+      case 'openrouter':
+        providerInstance = new OpenRouterProvider(config)
+        break
+      default:
+        throw new Error(`Unknown provider: ${provider}`)
     }
+
+    this.providers.set(provider, providerInstance)
+    this.providerStatus.set(provider, {
+      provider,
+      available: true,
+      lastChecked: new Date(),
+    })
+
+    console.log(`✓ Initialized AI provider: ${provider}`);
   }
 
   /**
@@ -255,6 +269,11 @@ export class AIProviderManager {
    */
   private async recordUsage(record: AIUsageRecord): Promise<void> {
     this.usageRecords.push(record)
+
+    // Prevent memory leak - keep only recent records
+    if (this.usageRecords.length > this.MAX_USAGE_RECORDS) {
+      this.usageRecords = this.usageRecords.slice(-this.MAX_USAGE_RECORDS);
+    }
 
     // Call custom handler if provided
     if (this.onUsageRecord) {

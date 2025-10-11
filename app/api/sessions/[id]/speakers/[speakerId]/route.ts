@@ -8,7 +8,7 @@ import {
   type SpeakerRole,
 } from '@/lib/speakers/manager'
 import { z } from 'zod'
-import { prisma } from '@/lib/server/db'
+import { prisma } from '@/lib/prisma'
 
 const updateSpeakerSchema = z.object({
   name: z.string().optional(),

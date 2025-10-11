@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
-import { prisma } from '@/lib/server/db';
+import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 // ============================================================================

@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/server/db'
+import { prisma } from '@/lib/prisma'
 import { logAction } from '@/lib/audit/logger'
 import { AuditAction, AuditResource } from '@/types/audit'
 

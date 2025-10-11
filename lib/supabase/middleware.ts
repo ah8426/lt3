@@ -71,20 +71,53 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith(path)
   )
 
+  // Redirect loop detection - check for redirect header to prevent infinite loops
+  const redirectCount = parseInt(request.headers.get('x-redirect-count') || '0', 10)
+  const MAX_REDIRECTS = 3
+
+  if (redirectCount >= MAX_REDIRECTS) {
+    // Too many redirects, allow request to proceed to prevent infinite loop
+    console.error(`Redirect loop detected for path: ${request.nextUrl.pathname}`)
+    return supabaseResponse
+  }
+
   // Redirect logic
   if (isProtectedPath && !user) {
     // Redirect to login if trying to access protected route without authentication
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('redirectTo', request.nextUrl.pathname)
-    return NextResponse.redirect(url)
+
+    const redirectResponse = NextResponse.redirect(url)
+    redirectResponse.headers.set('x-redirect-count', String(redirectCount + 1))
+
+    // Copy cookies from supabaseResponse to maintain session
+    redirectResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+
+    return redirectResponse
   }
 
   if (isAuthPath && user) {
     // Redirect to dashboard if already authenticated and trying to access auth pages
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+
+    // Check for redirectTo parameter
+    const redirectTo = request.nextUrl.searchParams.get('redirectTo')
+    if (redirectTo && !authPaths.some(path => redirectTo.startsWith(path))) {
+      // Redirect to the original destination if valid
+      url.pathname = redirectTo
+      url.searchParams.delete('redirectTo')
+    } else {
+      url.pathname = '/dashboard'
+    }
+
+    const redirectResponse = NextResponse.redirect(url)
+    redirectResponse.headers.set('x-redirect-count', String(redirectCount + 1))
+
+    // Copy cookies from supabaseResponse to maintain session
+    redirectResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+
+    return redirectResponse
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

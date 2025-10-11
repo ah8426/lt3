@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 
 export interface APIError {
   error: string;
@@ -45,6 +46,72 @@ export function handleAPIError(error: unknown, version: string = 'v1'): NextResp
       {
         error: 'Validation failed',
         details: error.errors,
+        version,
+      },
+      { status: 400 }
+    );
+  }
+
+  // Handle Prisma errors
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    switch (error.code) {
+      case 'P2002': // Unique constraint failed
+        return NextResponse.json(
+          {
+            error: 'Resource already exists',
+            code: 'DUPLICATE',
+            details: { field: error.meta?.target },
+            version,
+          },
+          { status: 409 }
+        );
+      case 'P2025': // Record not found
+        return NextResponse.json(
+          {
+            error: 'Resource not found',
+            code: 'NOT_FOUND',
+            version,
+          },
+          { status: 404 }
+        );
+      case 'P2003': // Foreign key constraint failed
+        return NextResponse.json(
+          {
+            error: 'Referenced resource not found',
+            code: 'FOREIGN_KEY_VIOLATION',
+            details: { field: error.meta?.field_name },
+            version,
+          },
+          { status: 400 }
+        );
+      case 'P2024': // Timed out fetching from database
+        return NextResponse.json(
+          {
+            error: 'Database timeout',
+            code: 'TIMEOUT',
+            version,
+          },
+          { status: 408 }
+        );
+      default:
+        return NextResponse.json(
+          {
+            error: 'Database operation failed',
+            code: error.code,
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+            version,
+          },
+          { status: 500 }
+        );
+    }
+  }
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return NextResponse.json(
+      {
+        error: 'Invalid database query',
+        code: 'VALIDATION_ERROR',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         version,
       },
       { status: 400 }

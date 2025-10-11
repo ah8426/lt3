@@ -140,6 +140,24 @@ export async function POST(request: NextRequest) {
       const stream = new TransformStream();
       const writer = stream.writable.getWriter();
 
+      // Keepalive mechanism to prevent connection timeout
+      const keepAliveInterval = setInterval(async () => {
+        try {
+          // Send keepalive comment (ignored by SSE parsers)
+          await writer.write(encoder.encode(': keepalive\n\n'));
+        } catch (error) {
+          // Connection closed, cleanup interval
+          clearInterval(keepAliveInterval);
+        }
+      }, 30000); // Every 30 seconds
+
+      // Cleanup function
+      const cleanup = async () => {
+        clearInterval(keepAliveInterval);
+        await writer.close();
+        await manager.cleanup();
+      };
+
       // Start ASR stream
       manager
         .startStream({
@@ -228,8 +246,7 @@ export async function POST(request: NextRequest) {
               })
               .eq('id', sessionId);
 
-            await writer.close();
-            await manager.cleanup();
+            await cleanup();
           },
         })
         .catch(async (error) => {
@@ -241,8 +258,7 @@ export async function POST(request: NextRequest) {
           await writer.write(
             encoder.encode(`data: ${JSON.stringify(response)}\n\n`)
           );
-          await writer.close();
-          await manager.cleanup();
+          await cleanup();
         });
 
       return new NextResponse(stream.readable, {

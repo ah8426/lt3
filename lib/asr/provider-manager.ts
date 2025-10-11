@@ -54,6 +54,7 @@ export class ASRProviderManager {
   private providerStats: Map<ASRProviderType, ProviderStats> = new Map();
   private failoverAttempts: number = 0;
   private maxFailoverAttempts: number = 3;
+  private readonly MAX_METRICS = 1000; // Prevent memory leak
 
   constructor(configs: ProviderConfig[]) {
     this.providerConfigs = configs.sort((a, b) => a.priority - b.priority);
@@ -65,26 +66,51 @@ export class ASRProviderManager {
    * Initialize provider instances
    */
   private initializeProviders(): void {
+    const errors: string[] = [];
+
     for (const config of this.providerConfigs) {
       if (!config.enabled) continue;
 
-      switch (config.type) {
-        case 'deepgram':
-          this.providers.set(config.type, new DeepgramProvider({ apiKey: config.apiKey }));
-          break;
-        case 'assemblyai':
-          this.providers.set(
-            config.type,
-            new AssemblyAIProvider({ apiKey: config.apiKey })
-          );
-          break;
-        case 'google-speech':
-          this.providers.set(
-            config.type,
-            new GoogleSpeechProvider({ apiKey: config.apiKey })
-          );
-          break;
+      try {
+        switch (config.type) {
+          case 'deepgram':
+            this.providers.set(config.type, new DeepgramProvider({ apiKey: config.apiKey }));
+            console.log(`✓ Initialized ASR provider: ${config.type}`);
+            break;
+          case 'assemblyai':
+            this.providers.set(
+              config.type,
+              new AssemblyAIProvider({ apiKey: config.apiKey })
+            );
+            console.log(`✓ Initialized ASR provider: ${config.type}`);
+            break;
+          case 'google-speech':
+            this.providers.set(
+              config.type,
+              new GoogleSpeechProvider({ apiKey: config.apiKey })
+            );
+            console.log(`✓ Initialized ASR provider: ${config.type}`);
+            break;
+          default:
+            errors.push(`Unknown provider type: ${config.type}`);
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        errors.push(`Failed to initialize ${config.type}: ${errorMsg}`);
+        console.error(`✗ Failed to initialize ASR provider ${config.type}:`, error);
       }
+    }
+
+    if (this.providers.size === 0) {
+      throw new Error(
+        'No ASR providers could be initialized. Errors:\n' + errors.join('\n')
+      );
+    }
+
+    if (errors.length > 0) {
+      console.warn(
+        `⚠️  Some ASR providers failed to initialize:\n${errors.join('\n')}`
+      );
     }
   }
 
@@ -292,6 +318,11 @@ export class ASRProviderManager {
 
     this.usageMetrics.push(metric);
 
+    // Prevent memory leak - keep only recent metrics
+    if (this.usageMetrics.length > this.MAX_METRICS) {
+      this.usageMetrics = this.usageMetrics.slice(-this.MAX_METRICS);
+    }
+
     // Update provider stats
     const stats = this.providerStats.get(provider);
     if (stats) {
@@ -326,6 +357,11 @@ export class ASRProviderManager {
       success: false,
       errorMessage,
     });
+
+    // Prevent memory leak - keep only recent metrics
+    if (this.usageMetrics.length > this.MAX_METRICS) {
+      this.usageMetrics = this.usageMetrics.slice(-this.MAX_METRICS);
+    }
   }
 
   /**
