@@ -102,18 +102,31 @@ export async function POST(request: NextRequest) {
       // Parse segments if provided
       let segments = undefined;
       if (segmentsJson) {
-        segments = JSON.parse(segmentsJson);
+        const rawSegments = JSON.parse(segmentsJson);
+        // Transform snake_case to camelCase for repository
+        segments = rawSegments.map((seg: any) => ({
+          text: seg.text,
+          speakerId: seg.speaker_id ?? null,
+          speakerName: seg.speaker_name ?? (seg.speaker ? String(seg.speaker) : null),
+          confidence: seg.confidence ?? null,
+          startMs: Math.round(seg.start_time || 0),
+          endMs: Math.round(seg.end_time || 0),
+          isFinal: seg.is_final ?? false,
+          isEdited: seg.is_edited ?? false,
+          editedBy: seg.edited_by ?? null,
+          provider: seg.provider ?? null,
+        }));
       }
 
       // Create session using repository
       const session = await sessionRepo.create({
         id: sessionId,
-        user_id: user.id,
-        matter_id: matterId ?? undefined,
+        userId: user.id,
+        matterId: matterId ?? undefined,
         title,
-        transcript,
-        audio_url: audioUrl,
-        duration_ms: durationMs,
+        transcriptData: transcript ? { text: transcript } : undefined,
+        audioUrl: audioUrl ?? undefined,
+        durationMs: durationMs,
         status,
         segments,
       });
@@ -150,17 +163,31 @@ export async function POST(request: NextRequest) {
       transcript,
       duration_ms: durationMs,
       status,
-      segments,
+      segments: rawSegments,
     } = validationResult.data;
+
+    // Transform segments from snake_case to camelCase
+    const segments = rawSegments ? rawSegments.map((seg: any) => ({
+      text: seg.text,
+      speakerId: seg.speaker_id ?? null,
+      speakerName: seg.speaker_name ?? (seg.speaker ? String(seg.speaker) : null),
+      confidence: seg.confidence ?? null,
+      startMs: Math.round(seg.start_time || 0),
+      endMs: Math.round(seg.end_time || 0),
+      isFinal: seg.is_final ?? false,
+      isEdited: seg.is_edited ?? false,
+      editedBy: seg.edited_by ?? null,
+      provider: seg.provider ?? null,
+    })) : undefined;
 
     // Create session using repository
     const session = await sessionRepo.create({
       id: sessionId,
-      user_id: user.id,
-      matter_id: matterId,
+      userId: user.id,
+      matterId: matterId,
       title,
-      transcript,
-      duration_ms: durationMs,
+      transcriptData: transcript ? { text: transcript } : undefined,
+      durationMs: durationMs,
       status,
       segments,
     });

@@ -199,9 +199,9 @@ model Matter {
 }
 
 model Session {
-  id       String @id @default(cuid())
-  matterId String @map("matter_id")
-  userId   String @map("user_id") @db.Uuid
+  id       String  @id @default(cuid())
+  matterId String? @map("matter_id")
+  userId   String  @map("user_id") @db.Uuid
 
   status      String  @default("active")
   title       String?
@@ -227,7 +227,7 @@ model Session {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  matter          Matter                @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  matter          Matter?               @relation(fields: [matterId], references: [id], onDelete: Cascade)
   user            User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   segments        TranscriptSegment[]
   chatMessages    ChatMessage[]

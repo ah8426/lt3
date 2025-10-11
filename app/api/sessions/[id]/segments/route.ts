@@ -94,11 +94,13 @@ export async function POST(
       data: {
         sessionId,
         text,
-        speaker: speaker ?? null,
+        speakerId: null, // Set via speaker_id if provided
+        speakerName: speaker ?? null, // Use speaker as name temporarily
         confidence: confidence ?? null,
-        startTime: start_time,
-        endTime: end_time,
-        isFinal: is_final !== undefined ? is_final : true,
+        startMs: Math.round(start_time),
+        endMs: Math.round(end_time),
+        isFinal: is_final ?? false,
+        provider: null,
       },
     });
 
@@ -169,14 +171,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Build update object with camelCase fields
+    // Build update object with correct field names
     const updates: any = {};
 
-    if (text !== undefined) updates.text = text;
-    if (speaker !== undefined) updates.speaker = speaker;
+    if (text !== undefined) {
+      updates.text = text;
+      updates.isEdited = true;
+      updates.editedBy = user.id;
+    }
+    if (speaker !== undefined) updates.speakerName = speaker;
     if (confidence !== undefined) updates.confidence = confidence;
-    if (start_time !== undefined) updates.startTime = start_time;
-    if (end_time !== undefined) updates.endTime = end_time;
+    if (start_time !== undefined) updates.startMs = Math.round(start_time);
+    if (end_time !== undefined) updates.endMs = Math.round(end_time);
     if (is_final !== undefined) updates.isFinal = is_final;
 
     // Update segment using Prisma
@@ -187,23 +193,10 @@ export async function PATCH(
       },
       data: {
         ...updates,
-        updatedAt: new Date(),
       },
     });
 
-    // Create edit history entry if text was changed
-    if (text !== undefined && original_text) {
-      await prisma.segmentEditHistory.create({
-        data: {
-          segmentId: segment_id,
-          editedBy: user.id,
-          previousText: original_text,
-          newText: text,
-        },
-      });
-    }
-
-    // Log segment update
+    // Log segment update (includes text changes in metadata)
     await logAction({
       userId: user.id,
       action: AuditAction.SEGMENT_UPDATE,

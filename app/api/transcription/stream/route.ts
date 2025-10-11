@@ -164,11 +164,13 @@ export async function POST(request: NextRequest) {
               data: {
                 sessionId: sessionId,
                 text: segment.text,
-                speaker: segment.speaker,
-                confidence: segment.confidence,
-                startTime: segment.startTime,
-                endTime: segment.endTime,
-                isFinal: segment.isFinal,
+                speakerId: null, // Will be set later during speaker identification
+                speakerName: null,
+                confidence: segment.confidence ?? null,
+                startMs: Math.round(segment.startTime || 0),
+                endMs: Math.round(segment.endTime || 0),
+                isFinal: segment.isFinal ?? false,
+                provider: null,
               },
             });
           },
@@ -317,7 +319,7 @@ export async function GET(request: NextRequest) {
       include: {
         segments: {
           orderBy: {
-            startTime: 'asc',
+            startMs: 'asc',
           },
         },
       },

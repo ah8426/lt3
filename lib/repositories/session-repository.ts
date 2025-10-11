@@ -3,8 +3,8 @@ import { APIError } from '@/lib/api/error-handler';
 import type { Session, TranscriptSegment, Matter } from '@prisma/client';
 
 export type SessionWithRelations = Session & {
-  matter?: Matter | null;
-  segments?: TranscriptSegment[];
+  matter?: Matter | Partial<Matter> | null;
+  segments?: TranscriptSegment[] | Partial<TranscriptSegment>[];
 };
 
 export interface CreateSessionData {
@@ -12,11 +12,11 @@ export interface CreateSessionData {
   userId: string;
   matterId?: string;
   title: string;
-  transcript?: string;
+  transcriptData?: any; // JSON field, not string
   audioUrl?: string;
   durationMs?: number;
   status?: string;
-  segments?: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>[];
+  segments?: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt'>[];
 }
 
 export interface UpdateSessionData {
@@ -56,18 +56,20 @@ export class SessionRepository {
           userId: data.userId,
           matterId: data.matterId,
           title: data.title,
-          transcript: data.transcript || '',
-          audioUrl: data.audioUrl,
+          transcriptData: data.transcriptData || null,
+          audioStoragePath: data.audioUrl,
           durationMs: data.durationMs || 0,
           status: data.status || 'draft',
           segments: data.segments ? {
             create: data.segments.map(segment => ({
               text: segment.text,
-              speaker: segment.speaker,
-              confidence: segment.confidence,
-              startTime: segment.startTime,
-              endTime: segment.endTime,
-              isFinal: segment.isFinal ?? true,
+              speakerId: segment.speakerId ?? null,
+              speakerName: segment.speakerName ?? null,
+              confidence: segment.confidence ?? null,
+              startMs: segment.startMs,
+              endMs: segment.endMs,
+              isFinal: segment.isFinal ?? false,
+              provider: segment.provider ?? null,
             })),
           } : undefined,
         },
@@ -75,7 +77,7 @@ export class SessionRepository {
           matter: true,
           segments: {
             orderBy: {
-              startTime: 'asc',
+              startMs: 'asc',
             },
           },
         },
@@ -112,7 +114,7 @@ export class SessionRepository {
           },
           segments: {
             orderBy: {
-              startTime: 'asc',
+              startMs: 'asc',
             },
           },
         },
@@ -166,15 +168,16 @@ export class SessionRepository {
               select: {
                 id: true,
                 text: true,
-                speaker: true,
+                speakerId: true,
+                speakerName: true,
                 confidence: true,
-                startTime: true,
-                endTime: true,
+                startMs: true,
+                endMs: true,
                 isFinal: true,
                 createdAt: true,
               },
               orderBy: {
-                startTime: 'asc',
+                startMs: 'asc',
               },
               take: 10, // Limit segments for list view
             },
@@ -208,16 +211,20 @@ export class SessionRepository {
    */
   async update(id: string, userId: string, data: UpdateSessionData): Promise<SessionWithRelations> {
     try {
+      // First verify ownership
+      const existing = await prisma.session.findUnique({
+        where: { id },
+      });
+
+      if (!existing || existing.userId !== userId) {
+        throw new APIError('Session not found', 404, 'NOT_FOUND');
+      }
+
+      // Then update
       const session = await prisma.session.update({
-        where: {
-          id_userId: {
-            id,
-            userId,
-          },
-        },
+        where: { id },
         data: {
           ...data,
-          updatedAt: new Date(),
         },
         include: {
           matter: true,
@@ -227,6 +234,7 @@ export class SessionRepository {
 
       return session;
     } catch (error: any) {
+      if (error instanceof APIError) throw error;
       if (error.code === 'P2025') {
         throw new APIError('Session not found', 404, 'NOT_FOUND');
       }
@@ -243,15 +251,21 @@ export class SessionRepository {
    */
   async delete(id: string, userId: string): Promise<void> {
     try {
+      // First verify ownership
+      const existing = await prisma.session.findUnique({
+        where: { id },
+      });
+
+      if (!existing || existing.userId !== userId) {
+        throw new APIError('Session not found', 404, 'NOT_FOUND');
+      }
+
+      // Then delete
       await prisma.session.delete({
-        where: {
-          id_userId: {
-            id,
-            userId,
-          },
-        },
+        where: { id },
       });
     } catch (error: any) {
+      if (error instanceof APIError) throw error;
       if (error.code === 'P2025') {
         throw new APIError('Session not found', 404, 'NOT_FOUND');
       }
@@ -268,7 +282,7 @@ export class SessionRepository {
    */
   async createSegments(
     sessionId: string,
-    segments: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>[]
+    segments: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt'>[]
   ): Promise<void> {
     if (segments.length === 0) return;
 
@@ -277,11 +291,13 @@ export class SessionRepository {
         data: segments.map(segment => ({
           sessionId,
           text: segment.text,
-          speaker: segment.speaker,
-          confidence: segment.confidence,
-          startTime: segment.startTime,
-          endTime: segment.endTime,
-          isFinal: segment.isFinal ?? true,
+          speakerId: segment.speakerId ?? null,
+          speakerName: segment.speakerName ?? null,
+          confidence: segment.confidence ?? null,
+          startMs: segment.startMs,
+          endMs: segment.endMs,
+          isFinal: segment.isFinal ?? false,
+          provider: segment.provider ?? null,
         })),
       });
     } catch (error) {
@@ -318,7 +334,7 @@ export class SessionRepository {
           sessionId,
         },
         orderBy: {
-          startTime: 'asc',
+          startMs: 'asc',
         },
       });
 
@@ -365,7 +381,6 @@ export class SessionRepository {
         },
         data: {
           ...data,
-          updatedAt: new Date(),
         },
       });
 
@@ -428,7 +443,7 @@ export class SessionRepository {
   async replaceSegments(
     sessionId: string,
     userId: string,
-    segments: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>[]
+    segments: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt'>[]
   ): Promise<void> {
     try {
       // First verify session ownership
@@ -459,11 +474,13 @@ export class SessionRepository {
                 data: segments.map(segment => ({
                   sessionId,
                   text: segment.text,
-                  speaker: segment.speaker,
-                  confidence: segment.confidence,
-                  startTime: segment.startTime,
-                  endTime: segment.endTime,
-                  isFinal: segment.isFinal ?? true,
+                  speakerId: segment.speakerId ?? null,
+                  speakerName: segment.speakerName ?? null,
+                  confidence: segment.confidence ?? null,
+                  startMs: segment.startMs,
+                  endMs: segment.endMs,
+                  isFinal: segment.isFinal ?? false,
+                  provider: segment.provider ?? null,
                 })),
               }),
             ]
