@@ -1,7 +1,17 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { createVersionRedirect } from '@/lib/api/versioning'
 
 export async function middleware(request: NextRequest) {
+  // Handle API versioning redirects first
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const versionRedirect = createVersionRedirect(request);
+    if (versionRedirect) {
+      return versionRedirect;
+    }
+  }
+
+  // Handle authentication
   return await updateSession(request)
 }
 

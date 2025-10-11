@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 import { AuditAction, AuditResource, AuditLog } from '@/types/audit';
 import { headers } from 'next/headers';
 
@@ -69,7 +69,7 @@ async function getLocation(): Promise<string | undefined> {
 }
 
 /**
- * Flush the log queue to the database
+ * Flush the log queue to the database using Prisma
  */
 async function flushLogs() {
   if (logQueue.length === 0) return;
@@ -83,30 +83,25 @@ async function flushLogs() {
   }
 
   try {
-    const supabase = await createServiceClient();
-
     // Prepare logs for insertion
     const logsToInsert = await Promise.all(
       logsToFlush.map(async (log) => ({
-        user_id: log.userId,
+        userId: log.userId,
         action: log.action,
         resource: log.resource,
-        resource_id: log.resourceId,
-        metadata: log.metadata,
-        ip_address: await getIpAddress(),
-        user_agent: await getUserAgent(),
+        resourceId: log.resourceId ?? null,
+        metadata: log.metadata ?? {},
+        ipAddress: await getIpAddress(),
+        userAgent: await getUserAgent(),
         location: await getLocation(),
-        retention_until: log.retentionUntil?.toISOString(),
+        retentionUntil: log.retentionUntil ?? null,
       }))
     );
 
-    const { error } = await supabase.from('audit_logs').insert(logsToInsert);
-
-    if (error) {
-      console.error('Failed to insert audit logs:', error);
-      // Re-queue failed logs
-      logQueue.push(...logsToFlush);
-    }
+    // Bulk insert using Prisma
+    await prisma.auditLog.createMany({
+      data: logsToInsert,
+    });
   } catch (error) {
     console.error('Error flushing audit logs:', error);
     // Re-queue failed logs
@@ -117,7 +112,7 @@ async function flushLogs() {
 /**
  * Schedule a flush of the log queue
  */
-function scheduleFlu() {
+function scheduleFlush() {
   if (flushTimeout) return;
 
   flushTimeout = setTimeout(() => {
@@ -137,58 +132,52 @@ export async function logAction(params: LogActionParams): Promise<void> {
     await flushLogs();
   } else {
     // Schedule a flush
-    scheduleFlu();
+    scheduleFlush();
   }
 }
 
 /**
- * Immediately log an action without batching
+ * Immediately log an action without batching using Prisma
  * Use this for critical actions that should be logged immediately
  */
 export async function logActionImmediate(params: LogActionParams): Promise<void> {
   try {
-    const supabase = await createServiceClient();
-
-    const { error } = await supabase.from('audit_logs').insert({
-      user_id: params.userId,
-      action: params.action,
-      resource: params.resource,
-      resource_id: params.resourceId,
-      metadata: params.metadata,
-      ip_address: await getIpAddress(),
-      user_agent: await getUserAgent(),
-      location: await getLocation(),
-      retention_until: params.retentionUntil?.toISOString(),
+    await prisma.auditLog.create({
+      data: {
+        userId: params.userId,
+        action: params.action,
+        resource: params.resource,
+        resourceId: params.resourceId ?? null,
+        metadata: params.metadata ?? {},
+        ipAddress: await getIpAddress(),
+        userAgent: await getUserAgent(),
+        location: await getLocation(),
+        retentionUntil: params.retentionUntil ?? null,
+      },
     });
-
-    if (error) {
-      console.error('Failed to insert audit log:', error);
-    }
   } catch (error) {
     console.error('Error logging audit action:', error);
   }
 }
 
 /**
- * Clean up old audit logs based on retention policy
+ * Clean up old audit logs based on retention policy using Prisma
  * Should be called periodically (e.g., daily via cron job)
  */
 export async function cleanupOldLogs(retentionDays: number = 90): Promise<void> {
   try {
-    const supabase = await createServiceClient();
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
-    // Delete logs older than retention period, but never delete logs with retention_until set
-    const { error } = await supabase
-      .from('audit_logs')
-      .delete()
-      .lt('created_at', cutoffDate.toISOString())
-      .is('retention_until', null);
-
-    if (error) {
-      console.error('Failed to cleanup old audit logs:', error);
-    }
+    // Delete logs older than retention period, but never delete logs with retentionUntil set
+    await prisma.auditLog.deleteMany({
+      where: {
+        createdAt: {
+          lt: cutoffDate,
+        },
+        retentionUntil: null,
+      },
+    });
   } catch (error) {
     console.error('Error cleaning up audit logs:', error);
   }

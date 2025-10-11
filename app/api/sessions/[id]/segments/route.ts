@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getUser } from '@/lib/supabase/auth';
+import { prisma } from '@/lib/prisma';
 import { logAction } from '@/lib/audit/logger';
 import { AuditAction, AuditResource } from '@/types/audit';
+import { SessionRepository } from '@/lib/repositories/session-repository';
 
 export const runtime = 'nodejs';
+
+const sessionRepo = new SessionRepository();
 
 /**
  * GET /api/sessions/[id]/segments
@@ -13,11 +17,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,35 +26,17 @@ export async function GET(
   try {
     const { id: sessionId } = await params;
 
-    // Verify session belongs to user
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', user.id)
-      .single();
+    // Use repository method
+    const segments = await sessionRepo.getSegments(sessionId, user.id);
 
-    if (sessionError || !session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-    }
-
-    // Get segments
-    const { data: segments, error: segmentsError } = await supabase
-      .from('transcription_segments')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('start_time', { ascending: true });
-
-    if (segmentsError) {
-      return NextResponse.json(
-        { error: segmentsError.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ segments: segments || [] });
-  } catch (error) {
+    return NextResponse.json({ segments });
+  } catch (error: any) {
     console.error('Get segments error:', error);
+
+    if (error.statusCode === 404) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Failed to get segments',
@@ -72,11 +54,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -96,36 +74,33 @@ export async function POST(
       );
     }
 
-    // Verify session belongs to user
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', user.id)
-      .single();
+    // Verify session exists and belongs to user
+    const session = await prisma.session.findFirst({
+      where: {
+        id: sessionId,
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-    if (sessionError || !session) {
+    if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Create segment
-    const { data: segment, error: createError } = await supabase
-      .from('transcription_segments')
-      .insert({
-        session_id: sessionId,
+    // Create segment using Prisma
+    const segment = await prisma.transcriptSegment.create({
+      data: {
+        sessionId,
         text,
-        speaker,
-        confidence: confidence || null,
-        start_time,
-        end_time,
-        is_final: is_final !== undefined ? is_final : true,
-      })
-      .select()
-      .single();
-
-    if (createError) {
-      return NextResponse.json({ error: createError.message }, { status: 500 });
-    }
+        speaker: speaker ?? null,
+        confidence: confidence ?? null,
+        startTime: start_time,
+        endTime: end_time,
+        isFinal: is_final !== undefined ? is_final : true,
+      },
+    });
 
     // Log segment creation
     await logAction({
@@ -159,11 +134,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -173,7 +144,7 @@ export async function PATCH(
     const { id: sessionId } = await params;
     const body = await request.json();
 
-    const { segment_id, text, speaker, confidence, start_time, end_time, is_final } =
+    const { segment_id, text, speaker, confidence, start_time, end_time, is_final, original_text } =
       body;
 
     if (!segment_id) {
@@ -183,54 +154,54 @@ export async function PATCH(
       );
     }
 
-    // Verify session belongs to user
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', user.id)
-      .single();
+    // Verify session exists and belongs to user
+    const session = await prisma.session.findFirst({
+      where: {
+        id: sessionId,
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-    if (sessionError || !session) {
+    if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Build update object
-    const updates: any = {
-      updated_at: new Date().toISOString(),
-    };
+    // Build update object with camelCase fields
+    const updates: any = {};
 
     if (text !== undefined) updates.text = text;
     if (speaker !== undefined) updates.speaker = speaker;
     if (confidence !== undefined) updates.confidence = confidence;
-    if (start_time !== undefined) updates.start_time = start_time;
-    if (end_time !== undefined) updates.end_time = end_time;
-    if (is_final !== undefined) updates.is_final = is_final;
+    if (start_time !== undefined) updates.startTime = start_time;
+    if (end_time !== undefined) updates.endTime = end_time;
+    if (is_final !== undefined) updates.isFinal = is_final;
 
-    // Update segment
-    const { data: segment, error: updateError } = await supabase
-      .from('transcription_segments')
-      .update(updates)
-      .eq('id', segment_id)
-      .eq('session_id', sessionId)
-      .select()
-      .single();
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
-    }
-
-    if (!segment) {
-      return NextResponse.json({ error: 'Segment not found' }, { status: 404 });
-    }
-
-    // Create edit history entry
-    await supabase.from('segment_edit_history').insert({
-      segment_id,
-      edited_by: user.id,
-      previous_text: body.original_text, // Should be passed from client
-      new_text: text,
+    // Update segment using Prisma
+    const segment = await prisma.transcriptSegment.update({
+      where: {
+        id: segment_id,
+        sessionId,
+      },
+      data: {
+        ...updates,
+        updatedAt: new Date(),
+      },
     });
+
+    // Create edit history entry if text was changed
+    if (text !== undefined && original_text) {
+      await prisma.segmentEditHistory.create({
+        data: {
+          segmentId: segment_id,
+          editedBy: user.id,
+          previousText: original_text,
+          newText: text,
+        },
+      });
+    }
 
     // Log segment update
     await logAction({
@@ -240,13 +211,18 @@ export async function PATCH(
       resourceId: segment_id,
       metadata: {
         sessionId,
-        updatedFields: Object.keys(updates).filter(k => k !== 'updated_at'),
+        updatedFields: Object.keys(updates),
       },
     });
 
     return NextResponse.json({ segment });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Update segment error:', error);
+
+    if (error.code === 'P2025') {
+      return NextResponse.json({ error: 'Segment not found' }, { status: 404 });
+    }
+
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Failed to update segment',
@@ -264,11 +240,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -286,28 +258,28 @@ export async function DELETE(
       );
     }
 
-    // Verify session belongs to user
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', user.id)
-      .single();
+    // Verify session exists and belongs to user
+    const session = await prisma.session.findFirst({
+      where: {
+        id: sessionId,
+        userId: user.id,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-    if (sessionError || !session) {
+    if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Delete segment
-    const { error: deleteError } = await supabase
-      .from('transcription_segments')
-      .delete()
-      .eq('id', segmentId)
-      .eq('session_id', sessionId);
-
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 });
-    }
+    // Delete segment using Prisma
+    await prisma.transcriptSegment.delete({
+      where: {
+        id: segmentId,
+        sessionId,
+      },
+    });
 
     // Log segment deletion
     await logAction({
@@ -321,8 +293,13 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Delete segment error:', error);
+
+    if (error.code === 'P2025') {
+      return NextResponse.json({ error: 'Segment not found' }, { status: 404 });
+    }
+
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : 'Failed to delete segment',

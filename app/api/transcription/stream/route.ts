@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/supabase/auth';
-import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { decryptAPIKey } from '@/lib/server/encryption/key-manager';
 import { createASRProviderManager } from '@/lib/asr/provider-manager';
@@ -45,8 +44,6 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  const supabase = await createClient();
 
   try {
     const body = await request.json();
@@ -116,24 +113,15 @@ export async function POST(request: NextRequest) {
       const sessionId = message.sessionId || crypto.randomUUID();
       const startTime = Date.now();
 
-      // Create session record
-      const { data: session, error: sessionError } = await supabase
-        .from('sessions')
-        .insert({
+      // Create session record using Prisma
+      const session = await prisma.session.create({
+        data: {
           id: sessionId,
-          user_id: user.id,
+          userId: user.id,
           status: 'recording',
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (sessionError) {
-        return NextResponse.json(
-          { error: 'Failed to create session' },
-          { status: 500 }
-        );
-      }
+          startedAt: new Date(),
+        },
+      });
 
       // Setup streaming response
       const encoder = new TextEncoder();
@@ -171,15 +159,17 @@ export async function POST(request: NextRequest) {
               encoder.encode(`data: ${JSON.stringify(response)}\n\n`)
             );
 
-            // Save segment to database
-            await supabase.from('transcription_segments').insert({
-              session_id: sessionId,
-              text: segment.text,
-              speaker: segment.speaker,
-              confidence: segment.confidence,
-              start_time: segment.startTime,
-              end_time: segment.endTime,
-              is_final: segment.isFinal,
+            // Save segment to database using Prisma
+            await prisma.transcriptSegment.create({
+              data: {
+                sessionId: sessionId,
+                text: segment.text,
+                speaker: segment.speaker,
+                confidence: segment.confidence,
+                startTime: segment.startTime,
+                endTime: segment.endTime,
+                isFinal: segment.isFinal,
+              },
             });
           },
           onError: async (error) => {
@@ -237,14 +227,14 @@ export async function POST(request: NextRequest) {
               }
             }
 
-            // Update session
-            await supabase
-              .from('sessions')
-              .update({
+            // Update session using Prisma
+            await prisma.session.update({
+              where: { id: sessionId },
+              data: {
                 status: 'completed',
-                duration_ms: duration,
-              })
-              .eq('id', sessionId);
+                durationMs: duration,
+              },
+            });
 
             await cleanup();
           },
@@ -303,11 +293,8 @@ export async function POST(request: NextRequest) {
  * Get transcription segments for a session
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Authenticate user
+  const user = await getUser();
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -321,35 +308,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
-    // Get session
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .eq('user_id', user.id)
-      .single();
+    // Get session with segments using Prisma
+    const session = await prisma.session.findFirst({
+      where: {
+        id: sessionId,
+        userId: user.id,
+      },
+      include: {
+        segments: {
+          orderBy: {
+            startTime: 'asc',
+          },
+        },
+      },
+    });
 
-    if (sessionError || !session) {
+    if (!session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-    }
-
-    // Get segments
-    const { data: segments, error: segmentsError } = await supabase
-      .from('transcription_segments')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('start_time', { ascending: true });
-
-    if (segmentsError) {
-      return NextResponse.json(
-        { error: 'Failed to fetch segments' },
-        { status: 500 }
-      );
     }
 
     return NextResponse.json({
       session,
-      segments: segments || [],
+      segments: session.segments || [],
     });
   } catch (error) {
     console.error('Get segments error:', error);

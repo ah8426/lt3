@@ -1,54 +1,27 @@
-import { createClient } from '@/lib/supabase/server';
+import { prisma } from '@/lib/prisma';
 import { APIError } from '@/lib/api/error-handler';
+import type { Session, TranscriptSegment, Matter } from '@prisma/client';
 
-export interface Session {
-  id: string;
-  user_id: string;
-  matter_id?: string;
-  title: string;
-  transcript: string;
-  audio_url?: string;
-  duration_ms: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  matter?: {
-    id: string;
-    name: string;
-    client_name: string;
-    case_number?: string;
-  };
-  segments?: Segment[];
-}
-
-export interface Segment {
-  id: string;
-  session_id: string;
-  text: string;
-  speaker?: number;
-  confidence?: number;
-  start_time: number;
-  end_time: number;
-  is_final: boolean;
-  created_at: string;
-  updated_at?: string;
-}
+export type SessionWithRelations = Session & {
+  matter?: Matter | null;
+  segments?: TranscriptSegment[];
+};
 
 export interface CreateSessionData {
   id?: string;
-  user_id: string;
-  matter_id?: string;
+  userId: string;
+  matterId?: string;
   title: string;
   transcript?: string;
-  audio_url?: string;
-  duration_ms?: number;
+  audioUrl?: string;
+  durationMs?: number;
   status?: string;
-  segments?: Omit<Segment, 'id' | 'session_id' | 'created_at' | 'updated_at'>[];
+  segments?: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>[];
 }
 
 export interface UpdateSessionData {
   title?: string;
-  matter_id?: string;
+  matterId?: string;
   status?: string;
   transcript?: string;
 }
@@ -61,7 +34,7 @@ export interface SessionFilters {
 }
 
 export interface SessionListResult {
-  sessions: Session[];
+  sessions: SessionWithRelations[];
   total: number;
   limit: number;
   offset: number;
@@ -69,77 +42,90 @@ export interface SessionListResult {
 
 /**
  * Repository for session data access
- * Abstracts database operations and provides optimized queries
+ * Abstracts database operations and provides optimized queries using Prisma
  */
 export class SessionRepository {
-  private supabase = createClient();
-
   /**
    * Create a new session
    */
-  async create(data: CreateSessionData): Promise<Session> {
-    const { data: session, error } = await this.supabase
-      .from('sessions')
-      .insert({
-        id: data.id,
-        user_id: data.user_id,
-        matter_id: data.matter_id,
-        title: data.title,
-        transcript: data.transcript || '',
-        audio_url: data.audio_url,
-        duration_ms: data.duration_ms || 0,
-        status: data.status || 'draft',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+  async create(data: CreateSessionData): Promise<SessionWithRelations> {
+    try {
+      const session = await prisma.session.create({
+        data: {
+          id: data.id,
+          userId: data.userId,
+          matterId: data.matterId,
+          title: data.title,
+          transcript: data.transcript || '',
+          audioUrl: data.audioUrl,
+          durationMs: data.durationMs || 0,
+          status: data.status || 'draft',
+          segments: data.segments ? {
+            create: data.segments.map(segment => ({
+              text: segment.text,
+              speaker: segment.speaker,
+              confidence: segment.confidence,
+              startTime: segment.startTime,
+              endTime: segment.endTime,
+              isFinal: segment.isFinal ?? true,
+            })),
+          } : undefined,
+        },
+        include: {
+          matter: true,
+          segments: {
+            orderBy: {
+              startTime: 'asc',
+            },
+          },
+        },
+      });
 
-    if (error) {
-      throw new APIError(`Failed to create session: ${error.message}`, 500, 'CREATE_ERROR');
+      return session;
+    } catch (error) {
+      throw new APIError(
+        `Failed to create session: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'CREATE_ERROR'
+      );
     }
-
-    // Create segments if provided
-    if (data.segments && data.segments.length > 0) {
-      await this.createSegments(session.id, data.segments);
-    }
-
-    return session;
   }
 
   /**
    * Get a session by ID with all related data (optimized single query)
    */
-  async findById(id: string, userId: string): Promise<Session | null> {
-    const { data: session, error } = await this.supabase
-      .from('sessions')
-      .select(`
-        *,
-        matter:matters(id, name, client_name, case_number),
-        segments:transcription_segments(
-          id, 
-          text, 
-          speaker, 
-          confidence, 
-          start_time, 
-          end_time, 
-          is_final, 
-          created_at,
-          updated_at
-        )
-      `)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
+  async findById(id: string, userId: string): Promise<SessionWithRelations | null> {
+    try {
+      const session = await prisma.session.findFirst({
+        where: {
+          id,
+          userId,
+        },
+        include: {
+          matter: {
+            select: {
+              id: true,
+              name: true,
+              clientName: true,
+              caseNumber: true,
+            },
+          },
+          segments: {
+            orderBy: {
+              startTime: 'asc',
+            },
+          },
+        },
+      });
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      throw new APIError(`Failed to get session: ${error.message}`, 500, 'FETCH_ERROR');
+      return session;
+    } catch (error) {
+      throw new APIError(
+        `Failed to get session: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'FETCH_ERROR'
+      );
     }
-
-    return session;
   }
 
   /**
@@ -153,247 +139,343 @@ export class SessionRepository {
       offset = 0,
     } = filters;
 
-    let query = this.supabase
-      .from('sessions')
-      .select(
-        `
-        *,
-        matter:matters(id, name, client_name, case_number),
-        segments:transcription_segments(
-          id, 
-          text, 
-          speaker, 
-          confidence, 
-          start_time, 
-          end_time, 
-          is_final, 
-          created_at
-        )
-      `,
-        { count: 'exact' }
-      )
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    try {
+      const where: any = { userId };
 
-    // Apply filters
-    if (matterId) {
-      query = query.eq('matter_id', matterId);
+      if (matterId) {
+        where.matterId = matterId;
+      }
+
+      if (status) {
+        where.status = status;
+      }
+
+      const [sessions, total] = await Promise.all([
+        prisma.session.findMany({
+          where,
+          include: {
+            matter: {
+              select: {
+                id: true,
+                name: true,
+                clientName: true,
+                caseNumber: true,
+              },
+            },
+            segments: {
+              select: {
+                id: true,
+                text: true,
+                speaker: true,
+                confidence: true,
+                startTime: true,
+                endTime: true,
+                isFinal: true,
+                createdAt: true,
+              },
+              orderBy: {
+                startTime: 'asc',
+              },
+              take: 10, // Limit segments for list view
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          skip: offset,
+          take: limit,
+        }),
+        prisma.session.count({ where }),
+      ]);
+
+      return {
+        sessions,
+        total,
+        limit,
+        offset,
+      };
+    } catch (error) {
+      throw new APIError(
+        `Failed to list sessions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'FETCH_ERROR'
+      );
     }
-
-    if (status) {
-      query = query.eq('status', status);
-    }
-
-    const { data: sessions, error, count } = await query;
-
-    if (error) {
-      throw new APIError(`Failed to list sessions: ${error.message}`, 500, 'FETCH_ERROR');
-    }
-
-    return {
-      sessions: sessions || [],
-      total: count || 0,
-      limit,
-      offset,
-    };
   }
 
   /**
    * Update a session
    */
-  async update(id: string, userId: string, data: UpdateSessionData): Promise<Session> {
-    const { data: session, error } = await this.supabase
-      .from('sessions')
-      .update({
-        ...data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
-      .single();
+  async update(id: string, userId: string, data: UpdateSessionData): Promise<SessionWithRelations> {
+    try {
+      const session = await prisma.session.update({
+        where: {
+          id_userId: {
+            id,
+            userId,
+          },
+        },
+        data: {
+          ...data,
+          updatedAt: new Date(),
+        },
+        include: {
+          matter: true,
+          segments: true,
+        },
+      });
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+      return session;
+    } catch (error: any) {
+      if (error.code === 'P2025') {
         throw new APIError('Session not found', 404, 'NOT_FOUND');
       }
-      throw new APIError(`Failed to update session: ${error.message}`, 500, 'UPDATE_ERROR');
+      throw new APIError(
+        `Failed to update session: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'UPDATE_ERROR'
+      );
     }
-
-    return session;
   }
 
   /**
    * Delete a session
    */
   async delete(id: string, userId: string): Promise<void> {
-    const { error } = await this.supabase
-      .from('sessions')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId);
-
-    if (error) {
-      throw new APIError(`Failed to delete session: ${error.message}`, 500, 'DELETE_ERROR');
+    try {
+      await prisma.session.delete({
+        where: {
+          id_userId: {
+            id,
+            userId,
+          },
+        },
+      });
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new APIError('Session not found', 404, 'NOT_FOUND');
+      }
+      throw new APIError(
+        `Failed to delete session: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'DELETE_ERROR'
+      );
     }
   }
 
   /**
    * Create segments for a session
    */
-  async createSegments(sessionId: string, segments: Omit<Segment, 'id' | 'session_id' | 'created_at' | 'updated_at'>[]): Promise<void> {
+  async createSegments(
+    sessionId: string,
+    segments: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>[]
+  ): Promise<void> {
     if (segments.length === 0) return;
 
-    const { error } = await this.supabase
-      .from('transcription_segments')
-      .insert(
-        segments.map(segment => ({
-          session_id: sessionId,
+    try {
+      await prisma.transcriptSegment.createMany({
+        data: segments.map(segment => ({
+          sessionId,
           text: segment.text,
           speaker: segment.speaker,
           confidence: segment.confidence,
-          start_time: segment.start_time,
-          end_time: segment.end_time,
-          is_final: segment.is_final,
-          created_at: new Date().toISOString(),
-        }))
+          startTime: segment.startTime,
+          endTime: segment.endTime,
+          isFinal: segment.isFinal ?? true,
+        })),
+      });
+    } catch (error) {
+      throw new APIError(
+        `Failed to create segments: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'CREATE_ERROR'
       );
-
-    if (error) {
-      throw new APIError(`Failed to create segments: ${error.message}`, 500, 'CREATE_ERROR');
     }
   }
 
   /**
    * Get segments for a session
    */
-  async getSegments(sessionId: string, userId: string): Promise<Segment[]> {
-    // First verify session ownership
-    const { data: session, error: sessionError } = await this.supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', userId)
-      .single();
+  async getSegments(sessionId: string, userId: string): Promise<TranscriptSegment[]> {
+    try {
+      // First verify session ownership
+      const session = await prisma.session.findFirst({
+        where: {
+          id: sessionId,
+          userId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
-    if (sessionError || !session) {
-      throw new APIError('Session not found', 404, 'NOT_FOUND');
+      if (!session) {
+        throw new APIError('Session not found', 404, 'NOT_FOUND');
+      }
+
+      const segments = await prisma.transcriptSegment.findMany({
+        where: {
+          sessionId,
+        },
+        orderBy: {
+          startTime: 'asc',
+        },
+      });
+
+      return segments;
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+      throw new APIError(
+        `Failed to get segments: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'FETCH_ERROR'
+      );
     }
-
-    const { data: segments, error } = await this.supabase
-      .from('transcription_segments')
-      .select(`
-        id,
-        session_id,
-        text,
-        speaker,
-        confidence,
-        start_time,
-        end_time,
-        is_final,
-        created_at,
-        updated_at
-      `)
-      .eq('session_id', sessionId)
-      .order('start_time', { ascending: true });
-
-    if (error) {
-      throw new APIError(`Failed to get segments: ${error.message}`, 500, 'FETCH_ERROR');
-    }
-
-    return segments || [];
   }
 
   /**
    * Update a segment
    */
-  async updateSegment(sessionId: string, segmentId: string, userId: string, data: Partial<Segment>): Promise<Segment> {
-    // First verify session ownership
-    const { data: session, error: sessionError } = await this.supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', userId)
-      .single();
+  async updateSegment(
+    sessionId: string,
+    segmentId: string,
+    userId: string,
+    data: Partial<TranscriptSegment>
+  ): Promise<TranscriptSegment> {
+    try {
+      // First verify session ownership
+      const session = await prisma.session.findFirst({
+        where: {
+          id: sessionId,
+          userId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
-    if (sessionError || !session) {
-      throw new APIError('Session not found', 404, 'NOT_FOUND');
-    }
+      if (!session) {
+        throw new APIError('Session not found', 404, 'NOT_FOUND');
+      }
 
-    const { data: segment, error } = await this.supabase
-      .from('transcription_segments')
-      .update({
-        ...data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', segmentId)
-      .eq('session_id', sessionId)
-      .select()
-      .single();
+      const segment = await prisma.transcriptSegment.update({
+        where: {
+          id: segmentId,
+          sessionId,
+        },
+        data: {
+          ...data,
+          updatedAt: new Date(),
+        },
+      });
 
-    if (error) {
-      if (error.code === 'PGRST116') {
+      return segment;
+    } catch (error: any) {
+      if (error instanceof APIError) throw error;
+      if (error.code === 'P2025') {
         throw new APIError('Segment not found', 404, 'NOT_FOUND');
       }
-      throw new APIError(`Failed to update segment: ${error.message}`, 500, 'UPDATE_ERROR');
+      throw new APIError(
+        `Failed to update segment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'UPDATE_ERROR'
+      );
     }
-
-    return segment;
   }
 
   /**
    * Delete a segment
    */
   async deleteSegment(sessionId: string, segmentId: string, userId: string): Promise<void> {
-    // First verify session ownership
-    const { data: session, error: sessionError } = await this.supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', userId)
-      .single();
+    try {
+      // First verify session ownership
+      const session = await prisma.session.findFirst({
+        where: {
+          id: sessionId,
+          userId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
-    if (sessionError || !session) {
-      throw new APIError('Session not found', 404, 'NOT_FOUND');
-    }
+      if (!session) {
+        throw new APIError('Session not found', 404, 'NOT_FOUND');
+      }
 
-    const { error } = await this.supabase
-      .from('transcription_segments')
-      .delete()
-      .eq('id', segmentId)
-      .eq('session_id', sessionId);
-
-    if (error) {
-      throw new APIError(`Failed to delete segment: ${error.message}`, 500, 'DELETE_ERROR');
+      await prisma.transcriptSegment.delete({
+        where: {
+          id: segmentId,
+          sessionId,
+        },
+      });
+    } catch (error: any) {
+      if (error instanceof APIError) throw error;
+      if (error.code === 'P2025') {
+        throw new APIError('Segment not found', 404, 'NOT_FOUND');
+      }
+      throw new APIError(
+        `Failed to delete segment: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'DELETE_ERROR'
+      );
     }
   }
 
   /**
    * Replace all segments for a session
    */
-  async replaceSegments(sessionId: string, userId: string, segments: Omit<Segment, 'id' | 'session_id' | 'created_at' | 'updated_at'>[]): Promise<void> {
-    // First verify session ownership
-    const { data: session, error: sessionError } = await this.supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', sessionId)
-      .eq('user_id', userId)
-      .single();
+  async replaceSegments(
+    sessionId: string,
+    userId: string,
+    segments: Omit<TranscriptSegment, 'id' | 'sessionId' | 'createdAt' | 'updatedAt'>[]
+  ): Promise<void> {
+    try {
+      // First verify session ownership
+      const session = await prisma.session.findFirst({
+        where: {
+          id: sessionId,
+          userId,
+        },
+        select: {
+          id: true,
+        },
+      });
 
-    if (sessionError || !session) {
-      throw new APIError('Session not found', 404, 'NOT_FOUND');
-    }
+      if (!session) {
+        throw new APIError('Session not found', 404, 'NOT_FOUND');
+      }
 
-    // Delete existing segments
-    await this.supabase
-      .from('transcription_segments')
-      .delete()
-      .eq('session_id', sessionId);
-
-    // Create new segments
-    if (segments.length > 0) {
-      await this.createSegments(sessionId, segments);
+      // Use transaction to delete and create atomically
+      await prisma.$transaction([
+        prisma.transcriptSegment.deleteMany({
+          where: {
+            sessionId,
+          },
+        }),
+        ...(segments.length > 0
+          ? [
+              prisma.transcriptSegment.createMany({
+                data: segments.map(segment => ({
+                  sessionId,
+                  text: segment.text,
+                  speaker: segment.speaker,
+                  confidence: segment.confidence,
+                  startTime: segment.startTime,
+                  endTime: segment.endTime,
+                  isFinal: segment.isFinal ?? true,
+                })),
+              }),
+            ]
+          : []),
+      ]);
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+      throw new APIError(
+        `Failed to replace segments: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'UPDATE_ERROR'
+      );
     }
   }
 
@@ -407,35 +489,45 @@ export class SessionRepository {
     byStatus: Record<string, number>;
     byMatter: Record<string, number>;
   }> {
-    const { data: sessions, error } = await this.supabase
-      .from('sessions')
-      .select('status, duration_ms, matter_id')
-      .eq('user_id', userId);
+    try {
+      const sessions = await prisma.session.findMany({
+        where: {
+          userId,
+        },
+        select: {
+          status: true,
+          durationMs: true,
+          matterId: true,
+        },
+      });
 
-    if (error) {
-      throw new APIError(`Failed to get session stats: ${error.message}`, 500, 'FETCH_ERROR');
-    }
+      const totalSessions = sessions.length;
+      const totalDuration = sessions.reduce((sum, session) => sum + (session.durationMs || 0), 0);
+      const averageDuration = totalSessions > 0 ? totalDuration / totalSessions : 0;
 
-    const totalSessions = sessions.length;
-    const totalDuration = sessions.reduce((sum, session) => sum + (session.duration_ms || 0), 0);
-    const averageDuration = totalSessions > 0 ? totalDuration / totalSessions : 0;
+      const byStatus: Record<string, number> = {};
+      const byMatter: Record<string, number> = {};
 
-    const byStatus: Record<string, number> = {};
-    const byMatter: Record<string, number> = {};
-
-    for (const session of sessions) {
-      byStatus[session.status] = (byStatus[session.status] || 0) + 1;
-      if (session.matter_id) {
-        byMatter[session.matter_id] = (byMatter[session.matter_id] || 0) + 1;
+      for (const session of sessions) {
+        byStatus[session.status] = (byStatus[session.status] || 0) + 1;
+        if (session.matterId) {
+          byMatter[session.matterId] = (byMatter[session.matterId] || 0) + 1;
+        }
       }
-    }
 
-    return {
-      totalSessions,
-      totalDuration,
-      averageDuration,
-      byStatus,
-      byMatter,
-    };
+      return {
+        totalSessions,
+        totalDuration,
+        averageDuration,
+        byStatus,
+        byMatter,
+      };
+    } catch (error) {
+      throw new APIError(
+        `Failed to get session stats: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        500,
+        'FETCH_ERROR'
+      );
+    }
   }
 }
