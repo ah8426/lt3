@@ -1,0 +1,69 @@
+{
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "debug.allowBreakpointsEverywhere": true,
+  "debug.showBreakpointsInOverviewRuler": true,
+  "debug.terminal.clearBeforeReusing": true,
+  "debug.javascript.codelens.npmScripts": "always",
+  "debug.javascript.suggestPrettyPrinting": true,
+  "debug.javascript.unmapMissingSources": true,
+  "debug.javascript.breakOnConditionalError": true,
+  "debug.console.fontSize": 12,
+  "debug.console.lineHeight": 18,
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.next": true,
+    "**/node_modules": true,
+    "**/debug/profiles/**": false,
+    "**/debug/snapshots/**": false
+  },
+  "search.exclude": {
+    "**/.next": true,
+    "**/node_modules": true,
+    "**/debug/profiles": true,
+    "**/debug/snapshots": true
+  },
+  "javascript.format.enable": false,
+  "typescript.format.enable": false,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "emmet.includeLanguages": {
+    "typescript": "html",
+    "typescriptreact": "html"
+  },
+  "terminal.integrated.env.windows": {
+    "DEBUG": "lt3:*",
+    "LOG_LEVEL": "debug"
+  },
+  "terminal.integrated.env.osx": {
+    "DEBUG": "lt3:*",
+    "LOG_LEVEL": "debug"
+  },
+  "terminal.integrated.env.linux": {
+    "DEBUG": "lt3:*",
+    "LOG_LEVEL": "debug"
+  }
+}

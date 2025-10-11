@@ -1,0 +1,104 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "🔧 Start Debug Development Server",
+      "type": "npm",
+      "script": "dev",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "options": {
+        "env": {
+          "NODE_ENV": "development",
+          "DEBUG": "lt3:*",
+          "LOG_LEVEL": "debug"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "📊 Generate CPU Profile",
+      "type": "shell",
+      "command": "node",
+      "args": [
+        "--cpu-prof",
+        "--cpu-prof-dir=./debug/profiles",
+        "--inspect-brk=9229",
+        "./node_modules/next/dist/bin/next",
+        "dev"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧠 Take Heap Snapshot",
+      "type": "shell",
+      "command": "node",
+      "args": [
+        "--expose-gc",
+        "./scripts/heap-snapshot.js"
+      ],
+      "group": "test",
+      "presentation": {
+        "echo": true,
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "🔍 Analyze Bundle Size",
+      "type": "npm",
+      "script": "analyze",
+      "group": "build",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "🧪 Run Tests with Coverage",
+      "type": "npm",
+      "script": "test:coverage",
+      "group": "test",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "🚀 Build Production with Source Maps",
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "options": {
+        "env": {
+          "GENERATE_SOURCEMAP": "true",
+          "NODE_ENV": "production"
+        }
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "🔄 Clean Debug Files",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "clean:debug"],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      }
+    }
+  ]
+}

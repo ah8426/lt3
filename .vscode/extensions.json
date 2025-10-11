@@ -1,0 +1,30 @@
+{
+  "recommendations": [
+    "ms-vscode.vscode-js-debug",
+    "msjsdiag.debugger-for-chrome",
+    "ms-vscode.vscode-typescript-next",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-json",
+    "humao.rest-client",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "wayou.vscode-todo-highlight",
+    "formulahendry.code-runner",
+    "ms-azuretools.vscode-docker",
+    "rangav.vscode-thunder-client",
+    "ms-playwright.playwright",
+    "ms-vscode.test-adapter-converter",
+    "hbenl.vscode-test-explorer",
+    "orta.vscode-jest",
+    "christian-kohler.path-intellisense",
+    "bradlc.vscode-tailwindcss",
+    "prisma.prisma",
+    "supabase.supabase"
+  ],
+  "unwantedRecommendations": [
+    "hookyqr.beautify",
+    "ms-vscode.vscode-typescript"
+  ]
+}

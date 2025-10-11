@@ -1,0 +1,157 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🚀 Debug Next.js Dev Server",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "lt3:*",
+        "LOG_LEVEL": "debug",
+        "ENABLE_DEBUG_LOGGING": "true"
+      },
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "pattern": "ready - started server on .+, url: (https?://.+)",
+        "uriFormat": "%s",
+        "action": "debugWithChrome"
+      }
+    },
+    {
+      "name": "🔧 Debug Next.js API Routes",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/next/dist/bin/next",
+      "args": ["dev"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "lt3:*",
+        "NODE_OPTIONS": "--inspect=9229 --enable-source-maps"
+      },
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/**",
+        "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/.next/**"
+      ],
+      "sourceMaps": true,
+      "smartStep": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "🧪 Debug Jest Tests",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": [
+        "--runInBand",
+        "--no-cache",
+        "--no-coverage",
+        "--detectOpenHandles",
+        "--forceExit"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "test",
+        "DEBUG": "lt3:*"
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "sourceMaps": true
+    },
+    {
+      "name": "🔍 Debug Specific Test File",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "args": [
+        "${relativeFile}",
+        "--runInBand",
+        "--no-cache"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "test"
+      },
+      "console": "integratedTerminal",
+      "sourceMaps": true
+    },
+    {
+      "name": "🚨 Debug Provider Managers",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/debug-providers.js",
+      "env": {
+        "NODE_ENV": "development",
+        "DEBUG": "lt3:providers,lt3:ai,lt3:asr",
+        "LOG_LEVEL": "trace"
+      },
+      "console": "integratedTerminal",
+      "sourceMaps": true
+    },
+    {
+      "name": "🔗 Attach to Running Process",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "address": "localhost",
+      "localRoot": "${workspaceFolder}",
+      "remoteRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**",
+        "node_modules/**"
+      ]
+    },
+    {
+      "name": "🌐 Debug Browser (Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${webRoot}/*",
+        "webpack:///src/*": "${webRoot}/*",
+        "webpack:///*": "*"
+      },
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-debug",
+      "runtimeArgs": [
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--remote-debugging-port=9222"
+      ]
+    },
+    {
+      "name": "📊 Debug Performance Profile",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/performance-test.js",
+      "env": {
+        "NODE_ENV": "development",
+        "ENABLE_PROFILING": "true",
+        "PROFILE_DURATION": "30000"
+      },
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "🔄 Full Stack Debug",
+      "configurations": [
+        "🚀 Debug Next.js Dev Server",
+        "🌐 Debug Browser (Chrome)"
+      ],
+      "stopAll": true,
+      "presentation": {
+        "hidden": false,
+        "group": "full-stack",
+        "order": 1
+      }
+    }
+  ]
+}
